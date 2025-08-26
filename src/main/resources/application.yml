@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: QuizMaster
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/quizmaster
+    username: postgres
+    password: root123
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
