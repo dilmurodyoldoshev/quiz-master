@@ -1,6 +1,7 @@
 package uz.app.quizmaster.dto;
 
 import lombok.Data;
+import uz.app.quizmaster.enums.Role;
 
 @Data
 public class UserDto {
@@ -10,4 +11,5 @@ public class UserDto {
     private String phone;
     private String email;
     private String password;
+    private Role role; // faqat student yoki teacher qoshilishi mumkin
 }
