@@ -1,6 +1,7 @@
 package uz.app.quizmaster.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import uz.app.quizmaster.dto.UserDto;
@@ -20,6 +21,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")  // faqat ADMIN qilishi mumkin
     public ResponseMessage createUser(UserDto userDto) {
         // username yoki email oldindan mavjudligini tekshiramiz
         if (userRepository.existsByUsername(userDto.getUsername())) {
@@ -45,17 +47,20 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")  // faqat ADMIN qilishi mumkin
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")  // faqat ADMIN qilishi mumkin
     public User getUserById(Integer id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")  // faqat ADMIN qilishi mumkin
     public ResponseMessage deleteUser(Integer id) {
         if (!userRepository.existsById(id)) {
             return new ResponseMessage(false, "User not found", null);
