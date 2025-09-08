@@ -1,13 +1,13 @@
 package uz.app.quizmaster.service;
 
-import uz.app.quizmaster.entity.Quiz;
-import java.util.List;
+import uz.app.quizmaster.dto.QuizDto;
+import uz.app.quizmaster.payload.ResponseMessage;
 
 public interface QuizService {
-    Quiz createQuiz(Quiz quiz, Integer teacherId);
-    Quiz activateQuiz(Integer quizId);
-    Quiz finishQuiz(Integer quizId);
-    Quiz toggleCheatingControl(Integer quizId, Boolean enabled);
-    List<Quiz> getAllQuizzes();
-    Quiz getQuizById(Integer id);
+    ResponseMessage createQuiz(QuizDto quizDto);
+    ResponseMessage activateQuiz(Integer quizId);
+    ResponseMessage finishQuiz(Integer quizId);
+    ResponseMessage toggleCheatingControl(Integer quizId, Boolean enabled);
+    ResponseMessage getAllQuizzes();
+    ResponseMessage getQuizById(Integer quizId);
 }
