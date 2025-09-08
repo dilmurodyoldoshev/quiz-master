@@ -2,14 +2,13 @@ package uz.app.quizmaster.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import uz.app.quizmaster.dto.QuizDto;
 import uz.app.quizmaster.entity.Quiz;
 import uz.app.quizmaster.entity.User;
+import uz.app.quizmaster.helper.Helper;
 import uz.app.quizmaster.payload.ResponseMessage;
 import uz.app.quizmaster.repository.QuizRepository;
-import uz.app.quizmaster.repository.UserRepository;
 import uz.app.quizmaster.service.QuizService;
 
 import java.time.LocalDateTime;
@@ -21,15 +20,11 @@ import java.util.NoSuchElementException;
 public class QuizServiceImpl implements QuizService {
 
     private final QuizRepository quizRepository;
-    private final UserRepository userRepository;
 
     @Override
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseMessage createQuiz(QuizDto quizDto) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-
-        User teacher = userRepository.findByUsername(username)
-                .orElseThrow(() -> new NoSuchElementException("User not found"));
+        User teacher = Helper.getCurrentPrincipal(); // current teacher
 
         Quiz quiz = new Quiz();
         quiz.setTitle(quizDto.getTitle());
@@ -49,7 +44,6 @@ public class QuizServiceImpl implements QuizService {
         );
     }
 
-
     @Override
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseMessage activateQuiz(Integer quizId) {
@@ -61,7 +55,6 @@ public class QuizServiceImpl implements QuizService {
         }
 
         quiz.setIsActive(true);
-
         if (quiz.getStartTime() == null) {
             quiz.setStartTime(LocalDateTime.now());
         }
@@ -70,7 +63,6 @@ public class QuizServiceImpl implements QuizService {
 
         return new ResponseMessage(true, "Quiz activated successfully", quiz);
     }
-
 
     @Override
     @PreAuthorize("hasRole('TEACHER')")
@@ -107,18 +99,10 @@ public class QuizServiceImpl implements QuizService {
         );
     }
 
-
     @Override
-    @PreAuthorize("hasRole('TEACHER')")
     public ResponseMessage getAllQuizzes() {
-        // Login qilgan userning username'ini olish
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User teacher = Helper.getCurrentPrincipal();
 
-        // Username bo‘yicha userni olish
-        User teacher = userRepository.findByUsername(username)
-                .orElseThrow(() -> new NoSuchElementException("User not found"));
-
-        // Faqat teacherning o‘ziga tegishli quizlarni olish
         List<Quiz> quizzes = quizRepository.findByCreatedBy(teacher);
 
         return new ResponseMessage(
@@ -128,19 +112,46 @@ public class QuizServiceImpl implements QuizService {
         );
     }
 
-
     @Override
-    @PreAuthorize("hasRole('TEACHER')")
     public ResponseMessage getQuizById(Integer quizId) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        User teacher = userRepository.findByUsername(username)
-                .orElseThrow(() -> new NoSuchElementException("User not found"));
+        User teacher = Helper.getCurrentPrincipal();
 
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
 
         if (!quiz.getCreatedBy().equals(teacher)) {
-            throw new SecurityException("You are not allowed to view this quiz");
+            return new ResponseMessage(false, "You are not allowed to view this quiz", null);
+        }
+
+        return new ResponseMessage(
+                true,
+                "Quiz fetched successfully",
+                quiz
+        );
+    }
+
+    @Override
+    public ResponseMessage getAllQuizzesPublic() {
+        // Faqat active bo‘lgan quizlarni ko‘rsatish mumkin
+        List<Quiz> quizzes = quizRepository.findAll()
+                .stream()
+                .filter(Quiz::getIsActive) // faqat aktiv quizlar
+                .toList();
+
+        return new ResponseMessage(
+                true,
+                "All active quizzes fetched successfully",
+                quizzes
+        );
+    }
+
+    @Override
+    public ResponseMessage getQuizByIdPublic(Integer quizId) {
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
+
+        if (!quiz.getIsActive()) {
+            return new ResponseMessage(false, "This quiz is not active", null);
         }
 
         return new ResponseMessage(
