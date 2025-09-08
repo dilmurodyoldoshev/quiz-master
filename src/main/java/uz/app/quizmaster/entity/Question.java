@@ -1,5 +1,6 @@
 package uz.app.quizmaster.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -27,7 +28,9 @@ public class Question {
 
     @ManyToOne
     @JoinColumn(name = "quiz_id")
+    @JsonIgnoreProperties({"questions"})
     private Quiz quiz;
+
 
     @ManyToOne
     @JoinColumn(name = "created_by")

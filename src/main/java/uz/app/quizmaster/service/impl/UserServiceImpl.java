@@ -76,7 +76,7 @@ public class UserServiceImpl implements UserService {
             return new ResponseMessage(false, "User not found", null);
         }
 
-        // O‘zini o‘chirib tashlashni cheklash (xavfsizlik uchun)
+        // O‘zini o‘chirib tashlashni cheklash
         if (currentAdmin.getId().equals(id)) {
             return new ResponseMessage(false, "Admin cannot delete himself", null);
         }

@@ -10,8 +10,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import uz.app.quizmaster.entity.User;
+import uz.app.quizmaster.repository.UserRepository;
 
 import java.io.IOException;
 
@@ -50,10 +53,16 @@ public class MyFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    @Autowired
+    private UserRepository userRepository;
+
     public void setUserToContext(String email) {
-        UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+        User user = (User) userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
         UsernamePasswordAuthenticationToken authenticationToken =
-                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authenticationToken);
     }
+
 }
