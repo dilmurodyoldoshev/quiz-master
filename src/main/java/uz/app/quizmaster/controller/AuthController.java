@@ -7,6 +7,8 @@ import uz.app.quizmaster.dto.LoginDto;
 import uz.app.quizmaster.payload.ResponseMessage;
 import uz.app.quizmaster.service.AuthService;
 
+import static uz.app.quizmaster.helper.Helper.buildResponse;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -16,8 +18,6 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<ResponseMessage> login(@RequestBody LoginDto loginDto) {
-        ResponseMessage response = authService.login(loginDto);
-        return ResponseEntity.ok(response);
+        return buildResponse(authService.login(loginDto));
     }
 }
-

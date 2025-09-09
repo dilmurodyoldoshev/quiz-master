@@ -14,14 +14,20 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // Frontend shu endpoint orqali ulanishi kerak
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")
+                // Dev uchun localhost, prod uchun frontend domenini qo‘yish kerak
+                .setAllowedOriginPatterns("http://localhost:3000", "https://your-frontend.com")
                 .withSockJS();
     }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // Student va Teacher uchun broker
+        // Simple broker (dev) – productionda RabbitMQ/ActiveMQ ishlatish mumkin
         registry.enableSimpleBroker("/topic", "/queue");
+
+        // App-dan kelgan xabarlar prefiksi
         registry.setApplicationDestinationPrefixes("/app");
+
+        // user-specific channel uchun prefiks
+        registry.setUserDestinationPrefix("/user");
     }
 }

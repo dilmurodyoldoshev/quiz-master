@@ -5,13 +5,13 @@ import org.springframework.stereotype.Service;
 import uz.app.quizmaster.entity.Attempt;
 import uz.app.quizmaster.entity.Quiz;
 import uz.app.quizmaster.entity.Result;
+import uz.app.quizmaster.payload.ResponseMessage;
 import uz.app.quizmaster.repository.AttemptRepository;
 import uz.app.quizmaster.repository.QuizRepository;
 import uz.app.quizmaster.repository.ResultRepository;
 import uz.app.quizmaster.service.ResultService;
 
 import java.time.LocalDateTime;
-import java.util.Comparator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -25,22 +25,21 @@ public class ResultServiceImpl implements ResultService {
     private final QuizRepository quizRepository;
 
     @Override
-    public Result calculateResult(Integer attemptId) {
+    public ResponseMessage calculateResult(Integer attemptId) {
         Attempt attempt = attemptRepository.findById(attemptId)
                 .orElseThrow(() -> new NoSuchElementException("Attempt not found"));
 
         Quiz quiz = attempt.getQuiz();
 
-        // Agar natija allaqachon mavjud bo‘lsa qaytaramiz
-        Result existing = resultRepository.findAll()
+        // allaqachon mavjud bo‘lsa
+        Result existing = resultRepository.findByQuizIdOrderByScoreDesc(quiz.getId())
                 .stream()
-                .filter(r -> r.getQuiz().getId().equals(quiz.getId()))
                 .filter(r -> r.getUser().getId().equals(attempt.getUser().getId()))
                 .findFirst()
                 .orElse(null);
 
         if (existing != null) {
-            return existing;
+            return new ResponseMessage(true, "Result already exists", existing);
         }
 
         Result result = new Result();
@@ -49,25 +48,22 @@ public class ResultServiceImpl implements ResultService {
         result.setScore(attempt.getScore());
         result.setCompletedAt(LocalDateTime.now());
 
-        return resultRepository.save(result);
+        Result saved = resultRepository.save(result);
+
+        return new ResponseMessage(true, "Result calculated successfully", saved);
     }
 
     @Override
-    public List<Result> getLeaderboard(Integer quizId) {
+    public ResponseMessage getLeaderboard(Integer quizId) {
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
 
-        // Shu quiz bo‘yicha barcha resultlarni olamiz
-        List<Result> results = resultRepository.findAll()
-                .stream()
-                .filter(r -> r.getQuiz().getId().equals(quiz.getId()))
-                .sorted(Comparator.comparing(Result::getScore).reversed())
-                .toList();
+        List<Result> results = resultRepository.findByQuizIdOrderByScoreDesc(quiz.getId());
 
-        // Rank beramiz (1,2,3,...)
+        // Rank beramiz
         AtomicInteger rankCounter = new AtomicInteger(1);
         results.forEach(r -> r.setRank(rankCounter.getAndIncrement()));
 
-        return results;
+        return new ResponseMessage(true, "Leaderboard fetched successfully", results);
     }
 }

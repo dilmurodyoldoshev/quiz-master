@@ -6,13 +6,12 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import uz.app.quizmaster.dto.QuestionDto;
 import uz.app.quizmaster.dto.QuizDto;
-import uz.app.quizmaster.entity.Result;
 import uz.app.quizmaster.payload.ResponseMessage;
 import uz.app.quizmaster.service.QuestionService;
 import uz.app.quizmaster.service.QuizService;
 import uz.app.quizmaster.service.ResultService;
 
-import java.util.List;
+import static uz.app.quizmaster.helper.Helper.buildResponse;
 
 @RestController
 @RequestMapping("/api/teacher")
@@ -27,60 +26,52 @@ public class TeacherController {
     @GetMapping("/quizzes")
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<ResponseMessage> getAllQuizzes() {
-        ResponseMessage response = quizService.getAllQuizzes(); // faqat o'z teacherining quizlari
-        return ResponseEntity.ok(response);
+        return buildResponse(quizService.getAllQuizzes());
     }
 
     // Teacherning quizId bo‘yicha bitta quizini olish
     @GetMapping("/quizzes/{quizId}")
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<ResponseMessage> getQuizById(@PathVariable Integer quizId) {
-        ResponseMessage response = quizService.getQuizById(quizId); // faqat shu teacherning quizlari
-        return ResponseEntity.ok(response);
+        return buildResponse(quizService.getQuizById(quizId));
     }
 
     // Quiz yaratish
-    @PostMapping("/quizzes/creat")
+    @PostMapping("/quizzes/create")
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseEntity<ResponseMessage> createQuiz(
-            @RequestBody QuizDto quizDto
-    ) {
-        ResponseMessage response = quizService.createQuiz(quizDto);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<ResponseMessage> createQuiz(@RequestBody QuizDto quizDto) {
+        return buildResponse(quizService.createQuiz(quizDto));
     }
-
 
     // Quizni aktiv qilish
     @PutMapping("/quizzes/{quizId}/activate")
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<ResponseMessage> activateQuiz(@PathVariable Integer quizId) {
-        ResponseMessage response = quizService.activateQuiz(quizId);
-        return ResponseEntity.ok(response);
+        return buildResponse(quizService.activateQuiz(quizId));
     }
 
     // Quizni tugatish
     @PutMapping("/quizzes/{quizId}/finish")
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<ResponseMessage> finishQuiz(@PathVariable Integer quizId) {
-        ResponseMessage response = quizService.finishQuiz(quizId);
-        return ResponseEntity.ok(response);
+        return buildResponse(quizService.finishQuiz(quizId));
     }
 
     // Cheating control qo‘shish
     @PutMapping("/quizzes/{quizId}/cheating")
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseEntity<ResponseMessage> toggleCheating(@PathVariable Integer quizId,
-                                                          @RequestParam Boolean enabled) {
-        ResponseMessage response = quizService.toggleCheatingControl(quizId, enabled);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<ResponseMessage> toggleCheating(
+            @PathVariable Integer quizId,
+            @RequestParam Boolean enabled
+    ) {
+        return buildResponse(quizService.toggleCheatingControl(quizId, enabled));
     }
 
     // Teacherning quizidagi barcha savollarni olish
     @GetMapping("/quizzes/{quizId}/questions")
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<ResponseMessage> getAllQuestions(@PathVariable Integer quizId) {
-        ResponseMessage response = questionService.getAllQuestions(quizId); // faqat shu teacherning quizlari
-        return ResponseEntity.ok(response);
+        return buildResponse(questionService.getAllQuestions(quizId));
     }
 
     // Teacherning quizidagi bitta savolni olish
@@ -90,8 +81,7 @@ public class TeacherController {
             @PathVariable Integer quizId,
             @PathVariable Integer questionId
     ) {
-        ResponseMessage response = questionService.getQuestion(quizId, questionId); // faqat shu teacherning quizlari
-        return ResponseEntity.ok(response);
+        return buildResponse(questionService.getQuestion(quizId, questionId));
     }
 
     // Savol qo‘shish
@@ -101,10 +91,10 @@ public class TeacherController {
             @PathVariable Integer quizId,
             @RequestBody QuestionDto dto
     ) {
-        ResponseMessage response = questionService.addQuestion(quizId, dto);
-        return ResponseEntity.ok(response);
+        return buildResponse(questionService.addQuestion(quizId, dto));
     }
 
+    // Savolni yangilash
     @PutMapping("/quizzes/{quizId}/questions/{questionId}/update")
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseEntity<ResponseMessage> updateQuestion(
@@ -112,14 +102,13 @@ public class TeacherController {
             @PathVariable Integer questionId,
             @RequestBody QuestionDto dto
     ) {
-        ResponseMessage response = questionService.updateQuestion(quizId, questionId, dto);
-        return ResponseEntity.ok(response);
+        return buildResponse(questionService.updateQuestion(quizId, questionId, dto));
     }
 
-    // Natijalarni olish (leaderboard)
+    // 🔹 Leaderboard olish
     @GetMapping("/quizzes/{quizId}/results")
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseEntity<List<Result>> getResults(@PathVariable Integer quizId) {
-        return ResponseEntity.ok(resultService.getLeaderboard(quizId));
+    public ResponseEntity<ResponseMessage> getLeaderboard(@PathVariable Integer quizId) {
+        return buildResponse(resultService.getLeaderboard(quizId));
     }
 }

@@ -115,13 +115,11 @@ public class QuestionServiceImpl implements QuestionService {
             return new ResponseMessage(false, "You are not allowed to view questions of this quiz", null);
         }
 
-        List<Question> questions = questionRepository.findAll()
-                .stream()
-                .filter(q -> q.getQuiz().getId().equals(quiz.getId()))
-                .toList();
+        List<Question> questions = questionRepository.findByQuizId(quizId);
 
         return new ResponseMessage(true, "Questions list", questions);
     }
+
 
     @Override
     public ResponseMessage getAllQuestionsPublic(Integer quizId) {
@@ -150,12 +148,9 @@ public class QuestionServiceImpl implements QuestionService {
             return new ResponseMessage(false, "Quiz is not active", null);
         }
 
-        Question question = questionRepository.findById(questionId)
+        Question question = questionRepository.findByIdAndQuizId(questionId, quizId)
                 .orElseThrow(() -> new NoSuchElementException("Question not found"));
 
-        if (!question.getQuiz().getId().equals(quiz.getId())) {
-            return new ResponseMessage(false, "This question does not belong to the given quiz", null);
-        }
 
         return new ResponseMessage(true, "Question fetched successfully", question);
     }

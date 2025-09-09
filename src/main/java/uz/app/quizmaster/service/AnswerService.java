@@ -1,7 +1,7 @@
 package uz.app.quizmaster.service;
 
-import uz.app.quizmaster.entity.Answer;
+import uz.app.quizmaster.payload.ResponseMessage;
 
 public interface AnswerService {
-    Answer submitAnswer(Integer questionId, Integer userId, String selectedOption);
+    ResponseMessage submitAnswer(Integer questionId, String selectedOption);
 }

@@ -1,10 +1,8 @@
 package uz.app.quizmaster.service;
 
-import uz.app.quizmaster.entity.Result;
-
-import java.util.List;
+import uz.app.quizmaster.payload.ResponseMessage;
 
 public interface ResultService {
-    Result calculateResult(Integer attemptId);
-    List<Result> getLeaderboard(Integer quizId);
+    ResponseMessage calculateResult(Integer attemptId);
+    ResponseMessage getLeaderboard(Integer quizId);
 }

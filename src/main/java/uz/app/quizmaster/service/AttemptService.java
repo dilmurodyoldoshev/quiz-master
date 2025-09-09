@@ -1,8 +1,8 @@
 package uz.app.quizmaster.service;
 
-import uz.app.quizmaster.entity.Attempt;
+import uz.app.quizmaster.payload.ResponseMessage;
 
 public interface AttemptService {
-    Attempt startAttempt(Integer quizId, Integer userId);
-    Attempt finishAttempt(Integer attemptId);
+    ResponseMessage startAttempt(Integer quizId);      // current student uchun
+    ResponseMessage finishAttempt(Integer attemptId);  // current student uchun
 }
