@@ -120,7 +120,6 @@ public class QuestionServiceImpl implements QuestionService {
         return new ResponseMessage(true, "Questions list", questions);
     }
 
-
     @Override
     public ResponseMessage getAllQuestionsPublic(Integer quizId) {
         Quiz quiz = quizRepository.findById(quizId)
@@ -151,10 +150,8 @@ public class QuestionServiceImpl implements QuestionService {
         Question question = questionRepository.findByIdAndQuizId(questionId, quizId)
                 .orElseThrow(() -> new NoSuchElementException("Question not found"));
 
-
         return new ResponseMessage(true, "Question fetched successfully", question);
     }
-
 
     private void mapDtoToQuestion(QuestionDto dto, Question question) {
         question.setText(dto.getText());
@@ -163,6 +160,5 @@ public class QuestionServiceImpl implements QuestionService {
         question.setOptionC(dto.getOptionC());
         question.setOptionD(dto.getOptionD());
         question.setCorrectAnswer(dto.getCorrectAnswer());
-        question.setTimeLimit(dto.getTimeLimit());
     }
 }

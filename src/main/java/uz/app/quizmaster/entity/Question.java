@@ -23,8 +23,6 @@ public class Question {
     private String optionC;
     private String optionD;
     private String correctAnswer;
-    private Integer timeLimit; // seconds
-
 
     @ManyToOne
     @JoinColumn(name = "quiz_id")

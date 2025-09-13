@@ -10,5 +10,4 @@ public class QuestionDto {
     private String optionC;
     private String optionD;
     private String correctAnswer;
-    private Integer timeLimit;
 }
