@@ -9,6 +9,5 @@ public class QuizDto {
     private String title;
     private String description;
     private Boolean cheatingControl = false;
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
+    private Integer durationMinutes;
 }

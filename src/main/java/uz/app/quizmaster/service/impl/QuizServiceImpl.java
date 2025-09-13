@@ -11,7 +11,6 @@ import uz.app.quizmaster.payload.ResponseMessage;
 import uz.app.quizmaster.repository.QuizRepository;
 import uz.app.quizmaster.service.QuizService;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -25,32 +24,39 @@ public class QuizServiceImpl implements QuizService {
     public ResponseMessage createQuiz(QuizDto quizDto) {
         User teacher = Helper.getCurrentPrincipal();
 
+        if (quizDto.getDurationMinutes() == null || quizDto.getDurationMinutes() <= 0) {
+            return new ResponseMessage(false, "Duration must be a positive number (minutes)", null);
+        }
+
         Quiz quiz = new Quiz();
         quiz.setTitle(quizDto.getTitle());
         quiz.setDescription(quizDto.getDescription());
-        quiz.setCheatingControl(quizDto.getCheatingControl());
-        quiz.setStartTime(quizDto.getStartTime());
-        quiz.setEndTime(quizDto.getEndTime());
+        quiz.setCheatingControl(Boolean.TRUE.equals(quizDto.getCheatingControl()));
+        quiz.setDurationMinutes(quizDto.getDurationMinutes());
         quiz.setCreatedBy(teacher);
         quiz.setIsActive(false);
 
-        Quiz savedQuiz = quizRepository.save(quiz);
-
-        return new ResponseMessage(true, "Quiz created successfully", savedQuiz);
+        Quiz saved = quizRepository.save(quiz);
+        return new ResponseMessage(true, "Quiz created successfully", saved);
     }
 
     @Override
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseMessage activateQuiz(Integer quizId) {
+        User teacher = Helper.getCurrentPrincipal();
+
         return quizRepository.findById(quizId)
                 .map(quiz -> {
+                    if (!quiz.getCreatedBy().equals(teacher)) {
+                        return new ResponseMessage(false, "You are not allowed to activate this quiz", null);
+                    }
                     if (quiz.getIsActive()) {
                         return new ResponseMessage(false, "Quiz is already active", quiz);
                     }
-                    quiz.setIsActive(true);
-                    if (quiz.getStartTime() == null) {
-                        quiz.setStartTime(LocalDateTime.now());
+                    if (quiz.getDurationMinutes() == null || quiz.getDurationMinutes() <= 0) {
+                        return new ResponseMessage(false, "Quiz duration is not set", null);
                     }
+                    quiz.setIsActive(true);
                     quizRepository.save(quiz);
                     return new ResponseMessage(true, "Quiz activated successfully", quiz);
                 })
@@ -60,13 +66,17 @@ public class QuizServiceImpl implements QuizService {
     @Override
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseMessage finishQuiz(Integer quizId) {
+        User teacher = Helper.getCurrentPrincipal();
+
         return quizRepository.findById(quizId)
                 .map(quiz -> {
+                    if (!quiz.getCreatedBy().equals(teacher)) {
+                        return new ResponseMessage(false, "You are not allowed to finish this quiz", null);
+                    }
                     if (!quiz.getIsActive()) {
                         return new ResponseMessage(false, "Quiz is already finished", quiz);
                     }
                     quiz.setIsActive(false);
-                    quiz.setEndTime(LocalDateTime.now());
                     quizRepository.save(quiz);
                     return new ResponseMessage(true, "Quiz finished successfully", quiz);
                 })
@@ -76,9 +86,14 @@ public class QuizServiceImpl implements QuizService {
     @Override
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseMessage toggleCheatingControl(Integer quizId, Boolean enabled) {
+        User teacher = Helper.getCurrentPrincipal();
+
         return quizRepository.findById(quizId)
                 .map(quiz -> {
-                    quiz.setCheatingControl(enabled);
+                    if (!quiz.getCreatedBy().equals(teacher)) {
+                        return new ResponseMessage(false, "You are not allowed to change this quiz", null);
+                    }
+                    quiz.setCheatingControl(Boolean.TRUE.equals(enabled));
                     quizRepository.save(quiz);
                     return new ResponseMessage(true, "Cheating control set to: " + enabled, quiz);
                 })
@@ -129,4 +144,3 @@ public class QuizServiceImpl implements QuizService {
                 .orElse(new ResponseMessage(false, "Quiz not found", null));
     }
 }
-

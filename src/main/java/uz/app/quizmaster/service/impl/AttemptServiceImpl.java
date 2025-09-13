@@ -38,23 +38,14 @@ public class AttemptServiceImpl implements AttemptService {
         }
 
         Quiz quiz = optQuiz.get();
-
         if (!Boolean.TRUE.equals(quiz.getIsActive())) {
             return new ResponseMessage(false, "Quiz is not active", null);
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        if (quiz.getStartTime() != null && now.isBefore(quiz.getStartTime())) {
-            return new ResponseMessage(false, "Quiz has not started yet", null);
-        }
-        if (quiz.getEndTime() != null && now.isAfter(quiz.getEndTime())) {
-            return new ResponseMessage(false, "Quiz has already finished", null);
-        }
+        // Bitta userga bitta urinish (agar ko‘p bo‘lsin desang, o‘zgartirasan)
+        Optional<Attempt> existing = attemptRepository
+                .findFirstByUserIdAndQuizIdOrderByStartedAtDesc(student.getId(), quizId);
 
-        // ❗️Bitta userga bitta urinish (attempt). Agar ko‘p urinish bo‘lsin desang, bu cheklovni o‘zgartirasan.
-        Optional<Attempt> existing = attemptRepository.findFirstByUserIdAndQuizIdOrderByStartedAtDesc(
-                student.getId(), quizId
-        );
         if (existing.isPresent()) {
             Attempt a = existing.get();
             if (a.getFinishedAt() == null) {
@@ -97,14 +88,31 @@ public class AttemptServiceImpl implements AttemptService {
             return new ResponseMessage(false, "Attempt is already finished", attempt);
         }
 
-        // Tugatish va score hisoblash
-        attempt.setFinishedAt(LocalDateTime.now());
+        // Deadline tekshirish
+        LocalDateTime deadline = attempt.getDeadline();
+        LocalDateTime now = LocalDateTime.now();
 
-        List<Answer> answers = answerRepository.findByUserIdAndQuestionQuizId(student.getId(), attempt.getQuiz().getId());
-        int score = (int) answers.stream().filter(a -> Boolean.TRUE.equals(a.getIsCorrect())).count();
+        if (deadline != null && now.isAfter(deadline)) {
+            attempt.setFinishedAt(deadline);
+            attempt.setScore(0); // yoki “time up → 0 score” qoidasi
+            attemptRepository.save(attempt);
+            return new ResponseMessage(false, "Time is up! Your attempt has been auto-finished.", attempt);
+        }
+
+        // Javoblarni tekshirish va score hisoblash
+        attempt.setFinishedAt(now);
+
+        List<Answer> answers = answerRepository.findByUserIdAndQuestionQuizId(
+                student.getId(), attempt.getQuiz().getId()
+        );
+
+        int score = (int) answers.stream()
+                .filter(a -> Boolean.TRUE.equals(a.getIsCorrect()))
+                .count();
+
         attempt.setScore(score);
 
         Attempt saved = attemptRepository.save(attempt);
-        return new ResponseMessage(true, "Attempt finished", saved);
+        return new ResponseMessage(true, "Attempt finished successfully", saved);
     }
 }

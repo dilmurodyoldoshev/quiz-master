@@ -17,18 +17,42 @@ public class Attempt {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    private LocalDateTime startedAt;
-    private LocalDateTime finishedAt;
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime startedAt;   // Quizni boshlagan vaqt
 
-    @ManyToOne
-    @JoinColumn(name = "quiz_id")
+    private LocalDateTime finishedAt;  // Student tugatgan vaqt (agar null bo‘lsa, hali tugatmagan)
+
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "quiz_id", nullable = false)
     private Quiz quiz;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
+    @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    private Integer score;
+    @Column(nullable = false)
+    private Integer score = 0;   // default 0
 
-    private Boolean cheatingDetected = false;
+    @Column(nullable = false)
+    private Boolean cheatingDetected = false; // default false
+
+    /**
+     * Deadline hisoblash uchun yordamchi metod:
+     * Quiz durationMinutes asosida attemptning oxirgi vaqti.
+     */
+    public LocalDateTime getDeadline() {
+        if (quiz == null || quiz.getDurationMinutes() == null) {
+            return null;
+        }
+        return startedAt.plusMinutes(quiz.getDurationMinutes());
+    }
+
+    /**
+     * Studentning belgilangan vaqt ichida yakunlaganligini tekshirish.
+     */
+    public boolean isFinishedInTime() {
+        LocalDateTime deadline = getDeadline();
+        if (finishedAt == null || deadline == null) return false;
+        return !finishedAt.isAfter(deadline);
+    }
 }

@@ -22,8 +22,7 @@ public class Quiz {
     private String description;
     private Boolean cheatingControl = false;
     private Boolean isActive = false;
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
+    private Integer durationMinutes;
 
     @ManyToOne
     @JoinColumn(name = "created_by")
