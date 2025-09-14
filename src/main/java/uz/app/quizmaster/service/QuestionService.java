@@ -1,17 +1,21 @@
 package uz.app.quizmaster.service;
 
 import uz.app.quizmaster.dto.QuestionDto;
+import uz.app.quizmaster.entity.Question;
 import uz.app.quizmaster.payload.ResponseMessage;
 
+import java.util.List;
+
 public interface QuestionService {
+
     // Teacher uchun metodlar
-    ResponseMessage addQuestion(Integer quizId, QuestionDto dto);
-    ResponseMessage updateQuestion(Integer quizId, Integer questionId, QuestionDto dto);
-    ResponseMessage deleteQuestion(Integer quizId, Integer questionId);
-    ResponseMessage getQuestion(Integer quizId, Integer questionId);
-    ResponseMessage getAllQuestions(Integer quizId);
+    ResponseMessage<Question> addQuestion(Integer quizId, QuestionDto dto);
+    ResponseMessage<Question> updateQuestion(Integer quizId, Integer questionId, QuestionDto dto);
+    ResponseMessage<Question> deleteQuestion(Integer quizId, Integer questionId);
+    ResponseMessage<Question> getQuestion(Integer quizId, Integer questionId);
+    ResponseMessage<List<Question>> getAllQuestions(Integer quizId);
 
     // Public (hammaga ko‘rinadigan) metodlar
-    ResponseMessage getAllQuestionsPublic(Integer quizId);
-    ResponseMessage getQuestionPublic(Integer quizId, Integer questionId);
+    ResponseMessage<List<Question>> getAllQuestionsPublic(Integer quizId);
+    ResponseMessage<Question> getQuestionPublic(Integer quizId, Integer questionId);
 }

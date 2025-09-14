@@ -34,9 +34,4 @@ public class UserController {
         return buildResponse(userService.getUserById(id));
     }
 
-    // foydalanuvchini o‘chirish
-    @DeleteMapping("/{id}")
-    public ResponseEntity<ResponseMessage> deleteUser(@PathVariable Integer id) {
-        return buildResponse(userService.deleteUser(id));
-    }
 }

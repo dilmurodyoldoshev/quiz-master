@@ -16,21 +16,24 @@ public class Question {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @Column(nullable = false)
     private String text;
 
     private String optionA;
     private String optionB;
     private String optionC;
     private String optionD;
+
+    @Column(nullable = false)
     private String correctAnswer;
 
-    @ManyToOne
+    @ManyToOne(optional = false)
     @JoinColumn(name = "quiz_id")
     @JsonIgnoreProperties({"questions"})
     private Quiz quiz;
 
 
-    @ManyToOne
+    @ManyToOne(optional = false)
     @JoinColumn(name = "created_by")
     private User createdBy;
 }

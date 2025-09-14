@@ -20,13 +20,21 @@ public class Quiz {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
+    @Column(nullable = false)
     private String title;
+
+    @Column(nullable = false)
     private String description;
+
+    @Column(nullable = false)
     private Boolean cheatingControl = false;
+
+    @Column(nullable = false)
     private Boolean isActive = false;
+
     private Integer durationMinutes;
 
-    @ManyToOne
+    @ManyToOne(optional = false)
     @JoinColumn(name = "created_by")
     private User createdBy;
 

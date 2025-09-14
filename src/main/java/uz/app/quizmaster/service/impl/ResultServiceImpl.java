@@ -2,6 +2,7 @@ package uz.app.quizmaster.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import uz.app.quizmaster.dto.LeaderboardEntryDto;
 import uz.app.quizmaster.entity.Attempt;
 import uz.app.quizmaster.entity.Quiz;
 import uz.app.quizmaster.entity.Result;
@@ -25,45 +26,43 @@ public class ResultServiceImpl implements ResultService {
     private final QuizRepository quizRepository;
 
     @Override
-    public ResponseMessage calculateResult(Integer attemptId) {
+    public ResponseMessage<Result> calculateResult(Integer attemptId) {
         Attempt attempt = attemptRepository.findById(attemptId)
                 .orElseThrow(() -> new NoSuchElementException("Attempt not found"));
 
-        Quiz quiz = attempt.getQuiz();
-
-        // allaqachon mavjud bo‘lsa
-        Result existing = resultRepository.findByQuizIdOrderByScoreDesc(quiz.getId())
+        Result existing = resultRepository.findByQuizIdOrderByScoreDesc(attempt.getQuiz().getId())
                 .stream()
                 .filter(r -> r.getUser().getId().equals(attempt.getUser().getId()))
                 .findFirst()
                 .orElse(null);
 
         if (existing != null) {
-            return new ResponseMessage(true, "Result already exists", existing);
+            return ResponseMessage.success("Result already exists", existing);
         }
 
         Result result = new Result();
-        result.setQuiz(quiz);
+        result.setQuiz(attempt.getQuiz());
         result.setUser(attempt.getUser());
         result.setScore(attempt.getScore());
         result.setCompletedAt(LocalDateTime.now());
 
         Result saved = resultRepository.save(result);
-
-        return new ResponseMessage(true, "Result calculated successfully", saved);
+        return ResponseMessage.success("Result calculated successfully", saved);
     }
 
     @Override
-    public ResponseMessage getLeaderboard(Integer quizId) {
+    public ResponseMessage<List<LeaderboardEntryDto>> getLeaderboard(Integer quizId) {
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
 
         List<Result> results = resultRepository.findByQuizIdOrderByScoreDesc(quiz.getId());
 
-        // Rank beramiz
-        AtomicInteger rankCounter = new AtomicInteger(1);
-        results.forEach(r -> r.setRank(rankCounter.getAndIncrement()));
+        int rank = 1;
+        List<LeaderboardEntryDto> leaderboard = results.stream()
+                .map(r -> new LeaderboardEntryDto(r.getUser().getUsername(), r.getScore(), rank++))
+                .toList();
 
-        return new ResponseMessage(true, "Leaderboard fetched successfully", results);
+        return ResponseMessage.success("Leaderboard fetched successfully", leaderboard);
     }
+
 }

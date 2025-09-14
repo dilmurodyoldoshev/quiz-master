@@ -1,18 +1,22 @@
 package uz.app.quizmaster.service;
 
 import uz.app.quizmaster.dto.QuizDto;
+import uz.app.quizmaster.entity.Quiz;
 import uz.app.quizmaster.payload.ResponseMessage;
 
+import java.util.List;
+
 public interface QuizService {
+
     // Teacher uchun metodlar
-    ResponseMessage createQuiz(QuizDto quizDto);
-    ResponseMessage activateQuiz(Integer quizId);
-    ResponseMessage finishQuiz(Integer quizId);
-    ResponseMessage toggleCheatingControl(Integer quizId, Boolean enabled);
-    ResponseMessage getAllQuizzes();
-    ResponseMessage getQuizById(Integer quizId);
+    ResponseMessage<Quiz> createQuiz(QuizDto quizDto);
+    ResponseMessage<Quiz> activateQuiz(Integer quizId);
+    ResponseMessage<Quiz> finishQuiz(Integer quizId);
+    ResponseMessage<Quiz> toggleCheatingControl(Integer quizId, Boolean enabled);
+    ResponseMessage<List<Quiz>> getAllQuizzes();
+    ResponseMessage<Quiz> getQuizById(Integer quizId);
 
     // Public (hammaga ko‘rinadigan) metodlar
-    ResponseMessage getAllQuizzesPublic();
-    ResponseMessage getQuizByIdPublic(Integer quizId);
+    ResponseMessage<List<Quiz>> getAllQuizzesPublic();
+    ResponseMessage<Quiz> getQuizByIdPublic(Integer quizId);
 }

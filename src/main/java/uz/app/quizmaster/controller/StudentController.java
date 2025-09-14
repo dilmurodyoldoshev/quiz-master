@@ -8,6 +8,8 @@ import uz.app.quizmaster.service.AnswerService;
 import uz.app.quizmaster.service.AttemptService;
 import uz.app.quizmaster.service.ResultService;
 
+import java.util.Map;
+
 import static uz.app.quizmaster.helper.Helper.buildResponse;
 
 @RestController
@@ -26,10 +28,13 @@ public class StudentController {
     }
 
     // 🔹 Javob yuborish
-    @PostMapping("/questions/{questionId}/answer")
-    public ResponseEntity<ResponseMessage> submitAnswer(@PathVariable Integer questionId,
-                                                        @RequestParam String selectedOption) {
-        return buildResponse(answerService.submitAnswer(questionId, selectedOption));
+    @PostMapping("/attempts/{attemptId}/questions/{questionId}/answer")
+    public ResponseEntity<ResponseMessage> submitAnswer(
+            @PathVariable Integer attemptId,
+            @PathVariable Integer questionId,
+            @RequestBody Map<String, String> payload) {
+        String selectedOption = payload.get("selectedOption");
+        return buildResponse(answerService.submitAnswer(attemptId, questionId, selectedOption));
     }
 
     // 🔹 Quizni tugatish
@@ -44,3 +49,4 @@ public class StudentController {
         return buildResponse(resultService.calculateResult(attemptId));
     }
 }
+

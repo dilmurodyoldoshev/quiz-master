@@ -2,6 +2,7 @@ package uz.app.quizmaster.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Email;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -25,7 +26,12 @@ public class User {
     private String firstName;
     private String lastName;
     private String username;
+
+    @Column(unique = true)
     private String phone;
+
+    @Column(unique = true, nullable = false)
+    @Email
     private String email;
 
     @JsonIgnore

@@ -30,11 +30,11 @@ public class Attempt {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false)
-    private Integer score = 0;   // default 0
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    private Integer score;
 
-    @Column(nullable = false)
-    private Boolean cheatingDetected = false; // default false
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private Boolean cheatingDetected;
 
     /**
      * Deadline hisoblash uchun yordamchi metod:

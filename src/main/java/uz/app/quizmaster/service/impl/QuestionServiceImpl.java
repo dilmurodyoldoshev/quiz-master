@@ -1,6 +1,7 @@
 package uz.app.quizmaster.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import uz.app.quizmaster.dto.QuestionDto;
@@ -15,9 +16,11 @@ import uz.app.quizmaster.service.QuestionService;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class QuestionServiceImpl implements QuestionService {
 
     private final QuestionRepository questionRepository;
@@ -25,132 +28,151 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Override
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseMessage addQuestion(Integer quizId, QuestionDto dto) {
-        User teacher = Helper.getCurrentPrincipal();
+    public ResponseMessage<Question> addQuestion(Integer quizId, QuestionDto dto) {
+        try {
+            User teacher = Helper.getCurrentPrincipal();
+            Quiz quiz = quizRepository.findById(quizId)
+                    .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
 
-        Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
+            if (!quiz.getCreatedBy().equals(teacher)) {
+                return ResponseMessage.fail("You are not allowed to add questions to this quiz", null);
+            }
 
-        if (!quiz.getCreatedBy().equals(teacher)) {
-            return new ResponseMessage(false, "You are not allowed to add questions to this quiz", null);
+            Question question = new Question();
+            mapDtoToQuestion(dto, question);
+            question.setQuiz(quiz);
+            Question saved = questionRepository.save(question);
+
+            return ResponseMessage.success("Question successfully added", saved);
+        } catch (Exception e) {
+            log.error("Error adding question: {}", e.getMessage(), e);
+            return ResponseMessage.fail("Error adding question", null);
         }
-
-        Question question = new Question();
-        mapDtoToQuestion(dto, question);
-        question.setQuiz(quiz);
-
-        Question saved = questionRepository.save(question);
-
-        return new ResponseMessage(true, "Question successfully added", saved);
     }
 
     @Override
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseMessage updateQuestion(Integer quizId, Integer questionId, QuestionDto dto) {
-        User teacher = Helper.getCurrentPrincipal();
+    public ResponseMessage<Question> updateQuestion(Integer quizId, Integer questionId, QuestionDto dto) {
+        try {
+            User teacher = Helper.getCurrentPrincipal();
+            Quiz quiz = quizRepository.findById(quizId)
+                    .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
+            Question question = questionRepository.findById(questionId)
+                    .orElseThrow(() -> new NoSuchElementException("Question not found"));
 
-        Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
+            if (!question.getQuiz().getId().equals(quiz.getId()) || !quiz.getCreatedBy().equals(teacher)) {
+                return ResponseMessage.fail("You are not allowed to update this question", null);
+            }
 
-        Question question = questionRepository.findById(questionId)
-                .orElseThrow(() -> new NoSuchElementException("Question not found"));
+            mapDtoToQuestion(dto, question);
+            Question updated = questionRepository.save(question);
 
-        if (!question.getQuiz().getId().equals(quiz.getId()) || !quiz.getCreatedBy().equals(teacher)) {
-            return new ResponseMessage(false, "You are not allowed to update this question", null);
+            return ResponseMessage.success("Question successfully updated", updated);
+        } catch (Exception e) {
+            log.error("Error updating question: {}", e.getMessage(), e);
+            return ResponseMessage.fail("Error updating question", null);
         }
-
-        mapDtoToQuestion(dto, question);
-        Question updated = questionRepository.save(question);
-
-        return new ResponseMessage(true, "Question successfully updated", updated);
     }
 
     @Override
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseMessage deleteQuestion(Integer quizId, Integer questionId) {
-        User teacher = Helper.getCurrentPrincipal();
+    public ResponseMessage<Question> deleteQuestion(Integer quizId, Integer questionId) {
+        try {
+            User teacher = Helper.getCurrentPrincipal();
+            Quiz quiz = quizRepository.findById(quizId)
+                    .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
+            Question question = questionRepository.findById(questionId)
+                    .orElseThrow(() -> new NoSuchElementException("Question not found"));
 
-        Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
+            if (!question.getQuiz().getId().equals(quiz.getId()) || !quiz.getCreatedBy().equals(teacher)) {
+                return ResponseMessage.fail("You are not allowed to delete this question", null);
+            }
 
-        Question question = questionRepository.findById(questionId)
-                .orElseThrow(() -> new NoSuchElementException("Question not found"));
-
-        if (!question.getQuiz().getId().equals(quiz.getId()) || !quiz.getCreatedBy().equals(teacher)) {
-            return new ResponseMessage(false, "You are not allowed to delete this question", null);
+            questionRepository.delete(question);
+            return ResponseMessage.success("Question successfully deleted", null);
+        } catch (Exception e) {
+            log.error("Error deleting question: {}", e.getMessage(), e);
+            return ResponseMessage.fail("Error deleting question", null);
         }
-
-        questionRepository.delete(question);
-
-        return new ResponseMessage(true, "Question successfully deleted", null);
     }
 
     @Override
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseMessage getQuestion(Integer quizId, Integer questionId) {
-        User teacher = Helper.getCurrentPrincipal();
+    public ResponseMessage<Question> getQuestion(Integer quizId, Integer questionId) {
+        try {
+            User teacher = Helper.getCurrentPrincipal();
+            Quiz quiz = quizRepository.findById(quizId)
+                    .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
+            Question question = questionRepository.findById(questionId)
+                    .orElseThrow(() -> new NoSuchElementException("Question not found"));
 
-        Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
+            if (!question.getQuiz().getId().equals(quiz.getId()) || !quiz.getCreatedBy().equals(teacher)) {
+                return ResponseMessage.fail("You are not allowed to view this question", null);
+            }
 
-        Question question = questionRepository.findById(questionId)
-                .orElseThrow(() -> new NoSuchElementException("Question not found"));
-
-        if (!question.getQuiz().getId().equals(quiz.getId()) || !quiz.getCreatedBy().equals(teacher)) {
-            return new ResponseMessage(false, "You are not allowed to view this question", null);
+            return ResponseMessage.success("Question found", question);
+        } catch (Exception e) {
+            log.error("Error fetching question: {}", e.getMessage(), e);
+            return ResponseMessage.fail("Error fetching question", null);
         }
-
-        return new ResponseMessage(true, "Question found", question);
     }
 
     @Override
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseMessage getAllQuestions(Integer quizId) {
-        User teacher = Helper.getCurrentPrincipal();
+    public ResponseMessage<List<Question>> getAllQuestions(Integer quizId) {
+        try {
+            User teacher = Helper.getCurrentPrincipal();
+            Quiz quiz = quizRepository.findById(quizId)
+                    .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
 
-        Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
+            if (!quiz.getCreatedBy().equals(teacher)) {
+                return ResponseMessage.fail("You are not allowed to view questions of this quiz", null);
+            }
 
-        if (!quiz.getCreatedBy().equals(teacher)) {
-            return new ResponseMessage(false, "You are not allowed to view questions of this quiz", null);
+            List<Question> questions = questionRepository.findByQuizId(quizId);
+            return ResponseMessage.success("Questions list", questions);
+        } catch (Exception e) {
+            log.error("Error fetching questions: {}", e.getMessage(), e);
+            return ResponseMessage.fail("Error fetching questions", null);
         }
-
-        List<Question> questions = questionRepository.findByQuizId(quizId);
-
-        return new ResponseMessage(true, "Questions list", questions);
     }
 
     @Override
-    public ResponseMessage getAllQuestionsPublic(Integer quizId) {
-        Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
+    public ResponseMessage<List<Question>> getAllQuestionsPublic(Integer quizId) {
+        try {
+            Quiz quiz = quizRepository.findById(quizId)
+                    .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
 
-        // Faqat aktiv quizdagi savollarni olish
-        if (!quiz.getIsActive()) {
-            return new ResponseMessage(false, "Quiz is not active", null);
+            if (!quiz.getIsActive()) {
+                return ResponseMessage.fail("Quiz is not active", null);
+            }
+
+            List<Question> questions = questionRepository.findByQuizId(quizId);
+            return ResponseMessage.success("Questions list fetched successfully", questions);
+        } catch (Exception e) {
+            log.error("Error fetching public questions: {}", e.getMessage(), e);
+            return ResponseMessage.fail("Error fetching public questions", null);
         }
-
-        List<Question> questions = questionRepository.findAll()
-                .stream()
-                .filter(q -> q.getQuiz().getId().equals(quiz.getId()))
-                .toList();
-
-        return new ResponseMessage(true, "Questions list fetched successfully", questions);
     }
 
     @Override
-    public ResponseMessage getQuestionPublic(Integer quizId, Integer questionId) {
-        Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
+    public ResponseMessage<Question> getQuestionPublic(Integer quizId, Integer questionId) {
+        try {
+            Quiz quiz = quizRepository.findById(quizId)
+                    .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
 
-        if (!quiz.getIsActive()) {
-            return new ResponseMessage(false, "Quiz is not active", null);
+            if (!quiz.getIsActive()) {
+                return ResponseMessage.fail("Quiz is not active", null);
+            }
+
+            Question question = questionRepository.findByIdAndQuizId(questionId, quizId)
+                    .orElseThrow(() -> new NoSuchElementException("Question not found"));
+
+            return ResponseMessage.success("Question fetched successfully", question);
+        } catch (Exception e) {
+            log.error("Error fetching public question: {}", e.getMessage(), e);
+            return ResponseMessage.fail("Error fetching public question", null);
         }
-
-        Question question = questionRepository.findByIdAndQuizId(questionId, quizId)
-                .orElseThrow(() -> new NoSuchElementException("Question not found"));
-
-        return new ResponseMessage(true, "Question fetched successfully", question);
     }
 
     private void mapDtoToQuestion(QuestionDto dto, Question question) {

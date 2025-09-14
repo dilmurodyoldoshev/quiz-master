@@ -21,6 +21,9 @@ public class Answer {
     private Boolean isCorrect;
     private LocalDateTime answeredAt;
 
+    @ManyToOne
+    @JoinColumn(name = "attempt_id") // DB ustuni nomi
+    private Attempt attempt;
 
     @ManyToOne
     @JoinColumn(name = "question_id")
