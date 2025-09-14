@@ -57,12 +57,15 @@ public class ResultServiceImpl implements ResultService {
 
         List<Result> results = resultRepository.findByQuizIdOrderByScoreDesc(quiz.getId());
 
-        int rank = 1;
+        AtomicInteger rankCounter = new AtomicInteger(1);
         List<LeaderboardEntryDto> leaderboard = results.stream()
-                .map(r -> new LeaderboardEntryDto(r.getUser().getUsername(), r.getScore(), rank++))
+                .map(r -> new LeaderboardEntryDto(
+                        r.getUser().getUsername(),
+                        r.getScore(),
+                        rankCounter.getAndIncrement()
+                ))
                 .toList();
 
         return ResponseMessage.success("Leaderboard fetched successfully", leaderboard);
     }
-
 }
