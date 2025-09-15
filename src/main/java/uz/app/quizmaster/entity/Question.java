@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import uz.app.quizmaster.enums.AnswerType;
 
 @Data
 @AllArgsConstructor
@@ -25,7 +26,7 @@ public class Question {
     private String optionD;
 
     @Column(nullable = false)
-    private String correctAnswer;
+    private AnswerType correctAnswer;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "quiz_id")

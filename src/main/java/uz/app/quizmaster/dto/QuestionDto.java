@@ -1,6 +1,7 @@
 package uz.app.quizmaster.dto;
 
 import lombok.Data;
+import uz.app.quizmaster.enums.AnswerType;
 
 @Data
 public class QuestionDto {
@@ -9,5 +10,5 @@ public class QuestionDto {
     private String optionB;
     private String optionC;
     private String optionD;
-    private String correctAnswer;
+    private AnswerType correctAnswer;
 }

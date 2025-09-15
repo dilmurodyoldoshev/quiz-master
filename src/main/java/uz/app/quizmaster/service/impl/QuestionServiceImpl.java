@@ -16,7 +16,7 @@ import uz.app.quizmaster.service.QuestionService;
 
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -30,17 +30,24 @@ public class QuestionServiceImpl implements QuestionService {
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseMessage<Question> addQuestion(Integer quizId, QuestionDto dto) {
         try {
+            // validate DTO
+            ResponseMessage<Question> dtoValidation = validateDto(dto);
+            if (!dtoValidation.success()) return dtoValidation;
+
             User teacher = Helper.getCurrentPrincipal();
+
             Quiz quiz = quizRepository.findById(quizId)
                     .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
 
-            if (!quiz.getCreatedBy().equals(teacher)) {
+            // compare by id to avoid proxy/equals issues
+            if (quiz.getCreatedBy() == null || !Objects.equals(quiz.getCreatedBy().getId(), teacher.getId())) {
                 return ResponseMessage.fail("You are not allowed to add questions to this quiz", null);
             }
 
             Question question = new Question();
             mapDtoToQuestion(dto, question);
             question.setQuiz(quiz);
+            question.setCreatedBy(teacher); // IMPORTANT
             Question saved = questionRepository.save(question);
 
             return ResponseMessage.success("Question successfully added", saved);
@@ -54,13 +61,18 @@ public class QuestionServiceImpl implements QuestionService {
     @PreAuthorize("hasRole('TEACHER')")
     public ResponseMessage<Question> updateQuestion(Integer quizId, Integer questionId, QuestionDto dto) {
         try {
+            ResponseMessage<Question> dtoValidation = validateDto(dto);
+            if (!dtoValidation.success()) return dtoValidation;
+
             User teacher = Helper.getCurrentPrincipal();
             Quiz quiz = quizRepository.findById(quizId)
                     .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
             Question question = questionRepository.findById(questionId)
                     .orElseThrow(() -> new NoSuchElementException("Question not found"));
 
-            if (!question.getQuiz().getId().equals(quiz.getId()) || !quiz.getCreatedBy().equals(teacher)) {
+            if (!Objects.equals(question.getQuiz().getId(), quiz.getId())
+                    || quiz.getCreatedBy() == null
+                    || !Objects.equals(quiz.getCreatedBy().getId(), teacher.getId())) {
                 return ResponseMessage.fail("You are not allowed to update this question", null);
             }
 
@@ -84,7 +96,9 @@ public class QuestionServiceImpl implements QuestionService {
             Question question = questionRepository.findById(questionId)
                     .orElseThrow(() -> new NoSuchElementException("Question not found"));
 
-            if (!question.getQuiz().getId().equals(quiz.getId()) || !quiz.getCreatedBy().equals(teacher)) {
+            if (!Objects.equals(question.getQuiz().getId(), quiz.getId())
+                    || quiz.getCreatedBy() == null
+                    || !Objects.equals(quiz.getCreatedBy().getId(), teacher.getId())) {
                 return ResponseMessage.fail("You are not allowed to delete this question", null);
             }
 
@@ -106,7 +120,9 @@ public class QuestionServiceImpl implements QuestionService {
             Question question = questionRepository.findById(questionId)
                     .orElseThrow(() -> new NoSuchElementException("Question not found"));
 
-            if (!question.getQuiz().getId().equals(quiz.getId()) || !quiz.getCreatedBy().equals(teacher)) {
+            if (!Objects.equals(question.getQuiz().getId(), quiz.getId())
+                    || quiz.getCreatedBy() == null
+                    || !Objects.equals(quiz.getCreatedBy().getId(), teacher.getId())) {
                 return ResponseMessage.fail("You are not allowed to view this question", null);
             }
 
@@ -125,7 +141,7 @@ public class QuestionServiceImpl implements QuestionService {
             Quiz quiz = quizRepository.findById(quizId)
                     .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
 
-            if (!quiz.getCreatedBy().equals(teacher)) {
+            if (quiz.getCreatedBy() == null || !Objects.equals(quiz.getCreatedBy().getId(), teacher.getId())) {
                 return ResponseMessage.fail("You are not allowed to view questions of this quiz", null);
             }
 
@@ -182,5 +198,30 @@ public class QuestionServiceImpl implements QuestionService {
         question.setOptionC(dto.getOptionC());
         question.setOptionD(dto.getOptionD());
         question.setCorrectAnswer(dto.getCorrectAnswer());
+    }
+
+    private ResponseMessage<Question> validateDto(QuestionDto dto) {
+        if (dto == null) {
+            return ResponseMessage.fail("Request body is empty", null);
+        }
+        if (dto.getText() == null || dto.getText().trim().isEmpty()) {
+            return ResponseMessage.fail("Question text is required", null);
+        }
+        if (dto.getOptionA() == null || dto.getOptionA().trim().isEmpty()) {
+            return ResponseMessage.fail("Option A is required", null);
+        }
+        if (dto.getOptionB() == null || dto.getOptionB().trim().isEmpty()) {
+            return ResponseMessage.fail("Option B is required", null);
+        }
+        if (dto.getOptionC() == null || dto.getOptionC().trim().isEmpty()) {
+            return ResponseMessage.fail("Option C is required", null);
+        }
+        if (dto.getOptionD() == null || dto.getOptionD().trim().isEmpty()) {
+            return ResponseMessage.fail("Option D is required", null);
+        }
+        if (dto.getCorrectAnswer() == null) {
+            return ResponseMessage.fail("Correct answer is required (A, B, C or D)", null);
+        }
+        return ResponseMessage.success("OK", null);
     }
 }
