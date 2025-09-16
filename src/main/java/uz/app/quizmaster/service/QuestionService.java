@@ -16,6 +16,6 @@ public interface QuestionService {
     ResponseMessage<List<Question>> getAllQuestions(Integer quizId);
 
     // Public (hammaga ko‘rinadigan) metodlar
-    ResponseMessage<List<Question>> getAllQuestionsPublic(Integer quizId);
-    ResponseMessage<Question> getQuestionPublic(Integer quizId, Integer questionId);
+    ResponseMessage<List<QuestionDto>> getAllQuestionsPublic(Integer quizId);
+    ResponseMessage<QuestionDto> getQuestionPublic(Integer quizId, Integer questionId);
 }

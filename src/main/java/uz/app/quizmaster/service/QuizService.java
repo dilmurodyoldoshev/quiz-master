@@ -17,6 +17,6 @@ public interface QuizService {
     ResponseMessage<Quiz> getQuizById(Integer quizId);
 
     // Public (hammaga ko‘rinadigan) metodlar
-    ResponseMessage<List<Quiz>> getAllQuizzesPublic();
-    ResponseMessage<Quiz> getQuizByIdPublic(Integer quizId);
+    ResponseMessage<List<QuizDto>> getAllQuizzesPublic();
+    ResponseMessage<QuizDto> getQuizByIdPublic(Integer quizId);
 }
