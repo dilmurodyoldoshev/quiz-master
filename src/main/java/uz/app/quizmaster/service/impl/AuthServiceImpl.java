@@ -10,7 +10,6 @@ import uz.app.quizmaster.entity.User;
 import uz.app.quizmaster.payload.ResponseMessage;
 import uz.app.quizmaster.repository.UserRepository;
 import uz.app.quizmaster.security.JwtProvider;
-import uz.app.quizmaster.security.MyFilter;
 import uz.app.quizmaster.service.AuthService;
 
 @Service

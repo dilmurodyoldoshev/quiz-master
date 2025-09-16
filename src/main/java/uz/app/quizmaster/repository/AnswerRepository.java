@@ -11,9 +11,5 @@ public interface AnswerRepository extends JpaRepository<Answer, Integer> {
     // Foydalanuvchining ma'lum quizdagi barcha javoblari
     List<Answer> findByUserIdAndQuestionQuizId(Integer userId, Integer quizId);
 
-    Optional<Answer> findByUserIdAndQuestionId(Integer id, Integer questionId);
-
-    List<Answer> findByAttemptId(Integer id);
-
     Optional<Answer> findByAttemptIdAndQuestionId(Integer attemptId, Integer questionId);
 }

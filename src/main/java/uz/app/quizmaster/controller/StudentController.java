@@ -1,20 +1,12 @@
 package uz.app.quizmaster.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import uz.app.quizmaster.dto.*;
-import uz.app.quizmaster.entity.Answer;
-import uz.app.quizmaster.entity.Attempt;
-import uz.app.quizmaster.entity.Question;
-import uz.app.quizmaster.entity.Quiz;
 import uz.app.quizmaster.payload.ResponseMessage;
 import uz.app.quizmaster.service.*;
 
 import java.util.List;
-import java.util.Map;
-
-import static uz.app.quizmaster.helper.Helper.buildResponse;
 
 @RestController
 @RequestMapping("/api/student")

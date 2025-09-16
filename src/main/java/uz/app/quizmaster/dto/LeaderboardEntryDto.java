@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class LeaderboardEntryDto {
-    private String username;   // Foydalanuvchi nomi
-    private Integer score;     // Natija
-    private Integer rank;      // O‘rin
+    private String username;
+    private Integer score;
+    private Integer rank;
 }
