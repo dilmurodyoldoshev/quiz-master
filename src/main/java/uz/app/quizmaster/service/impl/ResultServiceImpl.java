@@ -16,6 +16,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BinaryOperator;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -55,14 +58,41 @@ public class ResultServiceImpl implements ResultService {
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
 
-        List<Result> results = resultRepository.findByQuizIdOrderByScoreDesc(quiz.getId());
+        // Barcha attempts
+        List<Attempt> attempts = attemptRepository.findByQuizId(quizId);
 
-        AtomicInteger rankCounter = new AtomicInteger(1);
-        List<LeaderboardEntryDto> leaderboard = results.stream()
-                .map(r -> new LeaderboardEntryDto(
-                        r.getUser().getUsername(),
-                        r.getScore(),
-                        rankCounter.getAndIncrement()
+        // Har bir user uchun eng yuqori balli attempt
+        List<Attempt> bestAttempts = attempts.stream()
+                .filter(a -> a.getFinishedAt() != null) // faqat tugallanganlar
+                .collect(Collectors.toMap(a -> a.getUser().getId(), Function.identity(), BinaryOperator.maxBy((a1, a2) -> {
+                    int cmp = Integer.compare(a1.getScore(), a2.getScore());
+                    if (cmp == 0) {
+                        return a1.getFinishedAt().compareTo(a2.getFinishedAt());
+                    }
+                    return cmp;
+                })))
+                .values()
+                .stream()
+                .toList();
+
+        // Sorting: score DESC, finishedAt ASC
+        List<Attempt> sorted = bestAttempts.stream()
+                .sorted((a1, a2) -> {
+                    int cmp = Integer.compare(a2.getScore(), a1.getScore()); // DESC
+                    if (cmp == 0) {
+                        return a1.getFinishedAt().compareTo(a2.getFinishedAt()); // ASC
+                    }
+                    return cmp;
+                })
+                .toList();
+
+        // Rank berish
+        AtomicInteger counter = new AtomicInteger(1);
+        List<LeaderboardEntryDto> leaderboard = sorted.stream()
+                .map(a -> new LeaderboardEntryDto(
+                        a.getUser().getUsername(),
+                        a.getScore(),
+                        counter.getAndIncrement()
                 ))
                 .toList();
 

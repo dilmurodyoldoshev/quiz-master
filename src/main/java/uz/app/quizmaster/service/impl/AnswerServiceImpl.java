@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import uz.app.quizmaster.dto.AnswerDto;
 import uz.app.quizmaster.entity.Answer;
 import uz.app.quizmaster.entity.Attempt;
 import uz.app.quizmaster.entity.Question;
@@ -15,14 +16,12 @@ import uz.app.quizmaster.payload.ResponseMessage;
 import uz.app.quizmaster.repository.AnswerRepository;
 import uz.app.quizmaster.repository.AttemptRepository;
 import uz.app.quizmaster.repository.QuestionRepository;
-import uz.app.quizmaster.repository.QuizRepository;
 import uz.app.quizmaster.service.AnswerService;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.Objects;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -35,17 +34,15 @@ public class AnswerServiceImpl implements AnswerService {
 
     @Override
     @Transactional
-    public ResponseMessage<Answer> submitAnswer(Integer attemptId, Integer questionId, String selectedOption) {
+    public ResponseMessage<AnswerDto> submitAnswer(Integer attemptId, Integer questionId, String selectedOption) {
         try {
-            // Current student
             User student = Helper.getCurrentPrincipal();
 
-            // Validate selected option presence
             if (selectedOption == null || selectedOption.trim().isEmpty()) {
                 return ResponseMessage.fail("Selected option is required", null);
             }
 
-            // Normalize and parse selectedOption to enum (A/B/C/D)
+            // Normalize to enum
             AnswerType selected;
             try {
                 selected = AnswerType.valueOf(selectedOption.trim().toUpperCase());
@@ -53,65 +50,71 @@ public class AnswerServiceImpl implements AnswerService {
                 return ResponseMessage.fail("Invalid selected option. Allowed values: A, B, C, D", null);
             }
 
-            // Get attempt
+            // Attempt tekshirish
             Attempt attempt = attemptRepository.findById(attemptId)
                     .orElseThrow(() -> new NoSuchElementException("Attempt not found"));
 
-            // Check attempt ownership
             if (!Objects.equals(attempt.getUser().getId(), student.getId())) {
                 return ResponseMessage.fail("You are not allowed to submit answer for this attempt", null);
             }
-
-            // Check finished
             if (attempt.getFinishedAt() != null) {
                 return ResponseMessage.fail("Attempt is already finished", null);
             }
 
-            Quiz quiz = attempt.getQuiz();
+            LocalDateTime now = LocalDateTime.now();
+            if (attempt.getDeadline() != null && now.isAfter(attempt.getDeadline())) {
+                return ResponseMessage.fail("Attempt deadline has passed", null);
+            }
 
-            // Check quiz active
+            Quiz quiz = attempt.getQuiz();
             if (!Boolean.TRUE.equals(quiz.getIsActive())) {
                 return ResponseMessage.fail("Quiz is not active", null);
             }
 
-            // Get question
+            // Question
             Question question = questionRepository.findById(questionId)
                     .orElseThrow(() -> new NoSuchElementException("Question not found"));
 
-            // Ensure question belongs to the same quiz as the attempt
             if (question.getQuiz() == null || !Objects.equals(question.getQuiz().getId(), quiz.getId())) {
                 return ResponseMessage.fail("Question does not belong to this quiz/attempt", null);
             }
 
-            // Check duplicate
-            Optional<Answer> existingAnswer = answerRepository.findByAttemptIdAndQuestionId(attemptId, questionId);
-            if (existingAnswer.isPresent()) {
-                return ResponseMessage.fail("You have already answered this question", existingAnswer.get());
-            }
+            // Old answer bor-yo‘qligini tekshirish
+            Optional<Answer> existingAnswerOpt = answerRepository.findByAttemptIdAndQuestionId(attemptId, questionId);
 
-            // Create answer
-            Answer answer = new Answer();
+            Answer answer = existingAnswerOpt.orElseGet(Answer::new);
+            boolean wasCorrect = Boolean.TRUE.equals(answer.getIsCorrect());
+
+            // update fields
             answer.setQuestion(question);
             answer.setUser(student);
-            // store selected option as string (e.g., "A")
+            answer.setAttempt(attempt);
             answer.setSelectedOption(selected.name());
-            // compare enum values
+
             boolean correct = question.getCorrectAnswer() != null && question.getCorrectAnswer().equals(selected);
             answer.setIsCorrect(correct);
-            answer.setAnsweredAt(LocalDateTime.now());
-            answer.setAttempt(attempt);
+            answer.setAnsweredAt(now);
 
             Answer saved = answerRepository.save(answer);
 
-            // Update attempt score
-            List<Answer> attemptAnswers = answerRepository.findByAttemptId(attemptId);
-            int score = (int) attemptAnswers.stream()
-                    .filter(a -> Boolean.TRUE.equals(a.getIsCorrect()))
-                    .count();
-            attempt.setScore(score);
-            attemptRepository.save(attempt);
+            // Score update
+            if (wasCorrect != correct) {
+                int score = attempt.getScore() == null ? 0 : attempt.getScore();
+                if (wasCorrect && !correct) score--;
+                else if (!wasCorrect && correct) score++;
+                attempt.setScore(score);
+                attemptRepository.save(attempt);
+            }
 
-            return ResponseMessage.success("Answer submitted successfully", saved);
+            // ✅ Mapping Answer → AnswerDto
+            AnswerDto dto = new AnswerDto();
+            dto.setQuestionId(saved.getQuestion().getId());
+            dto.setQuestionText(saved.getQuestion().getText());
+            dto.setSelectedOption(saved.getSelectedOption());
+            dto.setIsCorrect(saved.getIsCorrect());
+
+            return ResponseMessage.success("Answer submitted successfully", dto);
+
         } catch (NoSuchElementException ex) {
             log.warn("Submit answer failed: {}", ex.getMessage());
             return ResponseMessage.fail(ex.getMessage(), null);

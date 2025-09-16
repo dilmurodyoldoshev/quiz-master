@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import uz.app.quizmaster.dto.AnswerDto;
+import uz.app.quizmaster.dto.AttemptDto;
 import uz.app.quizmaster.entity.Answer;
 import uz.app.quizmaster.entity.Attempt;
 import uz.app.quizmaster.entity.Quiz;
@@ -18,6 +20,7 @@ import uz.app.quizmaster.service.AttemptService;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +32,7 @@ public class AttemptServiceImpl implements AttemptService {
 
     @Override
     @PreAuthorize("hasRole('STUDENT')")
-    public ResponseMessage<Attempt> startAttempt(Integer quizId) {
+    public ResponseMessage<AttemptDto> startAttempt(Integer quizId) {
         User student = Helper.getCurrentPrincipal();
 
         Optional<Quiz> optQuiz = quizRepository.findById(quizId);
@@ -48,9 +51,9 @@ public class AttemptServiceImpl implements AttemptService {
         if (existing.isPresent()) {
             Attempt a = existing.get();
             if (a.getFinishedAt() == null) {
-                return ResponseMessage.fail("You already have an active attempt for this quiz", a);
+                return ResponseMessage.fail("You already have an active attempt for this quiz", mapToDto(a));
             }
-            return ResponseMessage.fail("You have already attempted this quiz", a);
+            return ResponseMessage.fail("You have already attempted this quiz", mapToDto(a));
         }
 
         Attempt attempt = new Attempt();
@@ -62,13 +65,13 @@ public class AttemptServiceImpl implements AttemptService {
         attempt.setScore(0);
 
         Attempt saved = attemptRepository.save(attempt);
-        return ResponseMessage.success("Attempt started", saved);
+        return ResponseMessage.success("Attempt started", mapToDto(saved));
     }
 
     @Override
     @PreAuthorize("hasRole('STUDENT')")
     @Transactional
-    public ResponseMessage<Attempt> finishAttempt(Integer attemptId) {
+    public ResponseMessage<AttemptDto> finishAttempt(Integer attemptId) {
         User student = Helper.getCurrentPrincipal();
 
         Optional<Attempt> optAttempt = attemptRepository.findById(attemptId);
@@ -83,7 +86,7 @@ public class AttemptServiceImpl implements AttemptService {
         }
 
         if (attempt.getFinishedAt() != null) {
-            return ResponseMessage.fail("Attempt is already finished", attempt);
+            return ResponseMessage.fail("Attempt is already finished", mapToDto(attempt));
         }
 
         LocalDateTime deadline = attempt.getDeadline();
@@ -92,8 +95,8 @@ public class AttemptServiceImpl implements AttemptService {
         if (deadline != null && now.isAfter(deadline)) {
             attempt.setFinishedAt(deadline);
             attempt.setScore(0);
-            attemptRepository.save(attempt);
-            return ResponseMessage.fail("Time is up! Your attempt has been auto-finished.", attempt);
+            Attempt saved = attemptRepository.save(attempt);
+            return ResponseMessage.fail("Time is up! Your attempt has been auto-finished.", mapToDto(saved));
         }
 
         attempt.setFinishedAt(now);
@@ -109,6 +112,37 @@ public class AttemptServiceImpl implements AttemptService {
         attempt.setScore(score);
 
         Attempt saved = attemptRepository.save(attempt);
-        return ResponseMessage.success("Attempt finished successfully", saved);
+        return ResponseMessage.success("Attempt finished successfully", mapToDto(saved));
+    }
+
+    /**
+     * Entity -> DTO converter
+     */
+    private AttemptDto mapToDto(Attempt attempt) {
+        AttemptDto dto = new AttemptDto();
+        dto.setId(attempt.getId());
+        dto.setQuizId(attempt.getQuiz().getId());
+        dto.setQuizTitle(attempt.getQuiz().getTitle());
+        dto.setStartedAt(attempt.getStartedAt());
+        dto.setDeadline(attempt.getDeadline());
+        dto.setFinishedAt(attempt.getFinishedAt());
+        dto.setScore(attempt.getScore());
+        dto.setCheatingDetected(attempt.getCheatingDetected());
+
+        List<AnswerDto> answers = answerRepository
+                .findByUserIdAndQuestionQuizId(attempt.getUser().getId(), attempt.getQuiz().getId())
+                .stream()
+                .map(a -> {
+                    AnswerDto ad = new AnswerDto();
+                    ad.setQuestionId(a.getQuestion().getId());
+                    ad.setQuestionText(a.getQuestion().getText());
+                    ad.setSelectedOption(a.getSelectedOption());
+                    ad.setIsCorrect(a.getIsCorrect());
+                    return ad;
+                })
+                .collect(Collectors.toList());
+
+        dto.setAnswers(answers);
+        return dto;
     }
 }

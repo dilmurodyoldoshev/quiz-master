@@ -154,7 +154,7 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
-    public ResponseMessage<List<Question>> getAllQuestionsPublic(Integer quizId) {
+    public ResponseMessage<List<QuestionDto>> getAllQuestionsPublic(Integer quizId) {
         try {
             Quiz quiz = quizRepository.findById(quizId)
                     .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
@@ -164,7 +164,11 @@ public class QuestionServiceImpl implements QuestionService {
             }
 
             List<Question> questions = questionRepository.findByQuizId(quizId);
-            return ResponseMessage.success("Questions list fetched successfully", questions);
+
+            // entity → dto mapping
+            List<QuestionDto> dtoList = questions.stream().map(this::mapToDto).toList();
+
+            return ResponseMessage.success("Questions list fetched successfully", dtoList);
         } catch (Exception e) {
             log.error("Error fetching public questions: {}", e.getMessage(), e);
             return ResponseMessage.fail("Error fetching public questions", null);
@@ -172,7 +176,7 @@ public class QuestionServiceImpl implements QuestionService {
     }
 
     @Override
-    public ResponseMessage<Question> getQuestionPublic(Integer quizId, Integer questionId) {
+    public ResponseMessage<QuestionDto> getQuestionPublic(Integer quizId, Integer questionId) {
         try {
             Quiz quiz = quizRepository.findById(quizId)
                     .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
@@ -184,12 +188,24 @@ public class QuestionServiceImpl implements QuestionService {
             Question question = questionRepository.findByIdAndQuizId(questionId, quizId)
                     .orElseThrow(() -> new NoSuchElementException("Question not found"));
 
-            return ResponseMessage.success("Question fetched successfully", question);
+            return ResponseMessage.success("Question fetched successfully", mapToDto(question));
         } catch (Exception e) {
             log.error("Error fetching public question: {}", e.getMessage(), e);
             return ResponseMessage.fail("Error fetching public question", null);
         }
     }
+
+    private QuestionDto mapToDto(Question question) {
+        QuestionDto dto = new QuestionDto();
+        dto.setText(question.getText());
+        dto.setOptionA(question.getOptionA());
+        dto.setOptionB(question.getOptionB());
+        dto.setOptionC(question.getOptionC());
+        dto.setOptionD(question.getOptionD());
+        // ⚠️ E’tibor: studentga correctAnswer qaytmaydi!
+        return dto;
+    }
+
 
     private void mapDtoToQuestion(QuestionDto dto, Question question) {
         question.setText(dto.getText());

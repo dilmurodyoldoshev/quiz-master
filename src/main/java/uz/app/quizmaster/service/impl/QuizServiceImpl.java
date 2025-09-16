@@ -13,7 +13,6 @@ import uz.app.quizmaster.repository.QuizRepository;
 import uz.app.quizmaster.service.QuizService;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -157,12 +156,20 @@ public class QuizServiceImpl implements QuizService {
     }
 
     @Override
-    public ResponseMessage<List<Quiz>> getAllQuizzesPublic() {
+    public ResponseMessage<List<QuizDto>> getAllQuizzesPublic() {
         try {
-            List<Quiz> quizzes = quizRepository.findAll()
+            List<QuizDto> quizzes = quizRepository.findByIsActiveTrue()
                     .stream()
-                    .filter(Quiz::getIsActive)
-                    .collect(Collectors.toList());
+                    .map(q -> {
+                        QuizDto dto = new QuizDto();
+                        dto.setTitle(q.getTitle());
+                        dto.setDescription(q.getDescription());
+                        dto.setCheatingControl(q.getCheatingControl());
+                        dto.setDurationMinutes(q.getDurationMinutes());
+                        return dto;
+                    })
+                    .toList();
+
             return ResponseMessage.success("All active quizzes fetched successfully", quizzes);
         } catch (Exception e) {
             log.error("Error fetching public quizzes: {}", e.getMessage(), e);
@@ -171,18 +178,20 @@ public class QuizServiceImpl implements QuizService {
     }
 
     @Override
-    public ResponseMessage<Quiz> getQuizByIdPublic(Integer quizId) {
+    public ResponseMessage<QuizDto> getQuizByIdPublic(Integer quizId) {
         try {
-            return quizRepository.findById(quizId)
-                    .map(quiz -> {
-                        if (!quiz.getIsActive()) {
-                            return ResponseMessage.<Quiz>fail("This quiz is not active", null);
-                        }
-                        return ResponseMessage.success("Quiz fetched successfully", quiz);
+            return quizRepository.findByIdAndIsActiveTrue(quizId)
+                    .map(q -> {
+                        QuizDto dto = new QuizDto();
+                        dto.setTitle(q.getTitle());
+                        dto.setDescription(q.getDescription());
+                        dto.setCheatingControl(q.getCheatingControl());
+                        dto.setDurationMinutes(q.getDurationMinutes());
+                        return ResponseMessage.success("Quiz fetched successfully", dto);
                     })
-                    .orElse(ResponseMessage.fail("Quiz not found", null));
+                    .orElse(ResponseMessage.fail("Quiz not found or not active", null));
         } catch (Exception e) {
-            log.error("Error fetching public quiz: {}", e.getMessage(), e);
+            log.error("Error fetching public quiz with id {}: {}", quizId, e.getMessage(), e);
             return ResponseMessage.fail("Error fetching public quiz", null);
         }
     }
