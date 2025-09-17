@@ -197,6 +197,7 @@ public class QuestionServiceImpl implements QuestionService {
 
     private QuestionDto mapToDto(Question question) {
         QuestionDto dto = new QuestionDto();
+        dto.setId(question.getId());
         dto.setText(question.getText());
         dto.setOptionA(question.getOptionA());
         dto.setOptionB(question.getOptionB());
