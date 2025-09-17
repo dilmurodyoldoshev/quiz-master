@@ -8,4 +8,6 @@ import java.util.List;
 public interface ResultRepository extends JpaRepository<Result, Integer> {
 
     List<Result> findByQuizIdOrderByScoreDesc(Integer quizId);
+
+    List<Result> findByUserIdOrderByCompletedAtDesc(Integer id);
 }
