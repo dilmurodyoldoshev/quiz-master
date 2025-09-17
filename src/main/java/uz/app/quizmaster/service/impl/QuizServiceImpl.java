@@ -162,6 +162,7 @@ public class QuizServiceImpl implements QuizService {
                     .stream()
                     .map(q -> {
                         QuizDto dto = new QuizDto();
+                        dto.setId(q.getId()); // 🔑 id qo‘shildi
                         dto.setTitle(q.getTitle());
                         dto.setDescription(q.getDescription());
                         dto.setCheatingControl(q.getCheatingControl());
@@ -183,6 +184,7 @@ public class QuizServiceImpl implements QuizService {
             return quizRepository.findByIdAndIsActiveTrue(quizId)
                     .map(q -> {
                         QuizDto dto = new QuizDto();
+                        dto.setId(q.getId()); // 🔑 id qo‘shildi
                         dto.setTitle(q.getTitle());
                         dto.setDescription(q.getDescription());
                         dto.setCheatingControl(q.getCheatingControl());
