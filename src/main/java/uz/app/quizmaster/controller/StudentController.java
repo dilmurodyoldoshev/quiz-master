@@ -68,4 +68,11 @@ public class StudentController {
     public ResponseMessage<List<LeaderboardEntryDto>> getLeaderboard(@PathVariable Integer quizId) {
         return resultService.getLeaderboard(quizId);
     }
+
+    // result
+    @GetMapping("/results")
+    public ResponseMessage<List<ResultDto>> getMyResults() {
+        return resultService.getResultsForCurrentUser();
+    }
+
 }
