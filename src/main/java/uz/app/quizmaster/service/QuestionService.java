@@ -13,7 +13,7 @@ public interface QuestionService {
     ResponseMessage<Question> updateQuestion(Integer quizId, Integer questionId, QuestionDto dto);
     ResponseMessage<Question> deleteQuestion(Integer quizId, Integer questionId);
     ResponseMessage<Question> getQuestion(Integer quizId, Integer questionId);
-    ResponseMessage<List<Question>> getAllQuestions(Integer quizId);
+    ResponseMessage<List<QuestionDto>> getAllQuestions(Integer quizId);
 
     // Public (hammaga ko‘rinadigan) metodlar
     ResponseMessage<List<QuestionDto>> getAllQuestionsPublic(Integer quizId);

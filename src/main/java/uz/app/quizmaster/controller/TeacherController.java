@@ -94,6 +94,6 @@ public class TeacherController {
 
     @GetMapping("/quizzes/{quizId}/leaderboard")
     public ResponseEntity<ResponseMessage> getLeaderboard(@PathVariable Integer quizId) {
-        return buildResponse(resultService.getLeaderboard(quizId));
+        return buildResponse(resultService.getResultsForMyQuizzes(quizId));
     }
 }

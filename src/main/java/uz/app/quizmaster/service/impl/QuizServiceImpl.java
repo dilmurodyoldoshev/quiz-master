@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import uz.app.quizmaster.dto.QuizDto;
+import uz.app.quizmaster.dto.UserDto;
 import uz.app.quizmaster.entity.Quiz;
 import uz.app.quizmaster.entity.User;
 import uz.app.quizmaster.helper.Helper;
@@ -13,6 +14,8 @@ import uz.app.quizmaster.repository.QuizRepository;
 import uz.app.quizmaster.service.QuizService;
 
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -21,9 +24,32 @@ public class QuizServiceImpl implements QuizService {
 
     private final QuizRepository quizRepository;
 
+    // ✅ DTO mapping helper
+    private QuizDto mapToDto(Quiz quiz) {
+        QuizDto dto = new QuizDto();
+        dto.setId(quiz.getId());
+        dto.setTitle(quiz.getTitle());
+        dto.setDescription(quiz.getDescription());
+        dto.setCheatingControl(quiz.getCheatingControl());
+        dto.setDurationMinutes(quiz.getDurationMinutes());
+
+        User createdBy = quiz.getCreatedBy();
+        if (createdBy != null) {
+            UserDto userDto = new UserDto();
+            userDto.setFirstName(createdBy.getFirstName());
+            userDto.setLastName(createdBy.getLastName());
+            userDto.setUsername(createdBy.getUsername());
+            userDto.setPhone(createdBy.getPhone());
+            userDto.setEmail(createdBy.getEmail());
+            userDto.setRole(createdBy.getRole());
+            dto.setCreateBy(userDto);
+        }
+        return dto;
+    }
+
     @Override
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseMessage<Quiz> createQuiz(QuizDto quizDto) {
+    public ResponseMessage<QuizDto> createQuiz(QuizDto quizDto) {
         try {
             User teacher = Helper.getCurrentPrincipal();
 
@@ -40,7 +66,7 @@ public class QuizServiceImpl implements QuizService {
             quiz.setIsActive(false);
 
             Quiz saved = quizRepository.save(quiz);
-            return ResponseMessage.success("Quiz created successfully", saved);
+            return ResponseMessage.success("Quiz created successfully", mapToDto(saved));
         } catch (Exception e) {
             log.error("Error creating quiz: {}", e.getMessage(), e);
             return ResponseMessage.fail("Error creating quiz", null);
@@ -49,24 +75,24 @@ public class QuizServiceImpl implements QuizService {
 
     @Override
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseMessage<Quiz> activateQuiz(Integer quizId) {
+    public ResponseMessage<QuizDto> activateQuiz(Integer quizId) {
         try {
             User teacher = Helper.getCurrentPrincipal();
 
             return quizRepository.findById(quizId)
                     .map(quiz -> {
-                        if (!quiz.getCreatedBy().equals(teacher)) {
-                            return ResponseMessage.<Quiz>fail("You are not allowed to activate this quiz", null);
+                        if (!Objects.equals(quiz.getCreatedBy().getId(), teacher.getId())) {
+                            return ResponseMessage.<QuizDto>fail("You are not allowed to activate this quiz", null);
                         }
                         if (quiz.getIsActive()) {
-                            return ResponseMessage.<Quiz>fail("Quiz is already active", quiz);
+                            return ResponseMessage.<QuizDto>fail("Quiz is already active", mapToDto(quiz));
                         }
                         if (quiz.getDurationMinutes() == null || quiz.getDurationMinutes() <= 0) {
-                            return ResponseMessage.<Quiz>fail("Quiz duration is not set", null);
+                            return ResponseMessage.<QuizDto>fail("Quiz duration is not set", null);
                         }
                         quiz.setIsActive(true);
                         quizRepository.save(quiz);
-                        return ResponseMessage.success("Quiz activated successfully", quiz);
+                        return ResponseMessage.success("Quiz activated successfully", mapToDto(quiz));
                     })
                     .orElse(ResponseMessage.fail("Quiz not found", null));
         } catch (Exception e) {
@@ -77,21 +103,21 @@ public class QuizServiceImpl implements QuizService {
 
     @Override
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseMessage<Quiz> finishQuiz(Integer quizId) {
+    public ResponseMessage<QuizDto> finishQuiz(Integer quizId) {
         try {
             User teacher = Helper.getCurrentPrincipal();
 
             return quizRepository.findById(quizId)
                     .map(quiz -> {
-                        if (!quiz.getCreatedBy().equals(teacher)) {
-                            return ResponseMessage.<Quiz>fail("You are not allowed to finish this quiz", null);
+                        if (!Objects.equals(quiz.getCreatedBy().getId(), teacher.getId())) {
+                            return ResponseMessage.<QuizDto>fail("You are not allowed to finish this quiz", null);
                         }
                         if (!quiz.getIsActive()) {
-                            return ResponseMessage.<Quiz>fail("Quiz is already finished", quiz);
+                            return ResponseMessage.<QuizDto>fail("Quiz is already finished", mapToDto(quiz));
                         }
                         quiz.setIsActive(false);
                         quizRepository.save(quiz);
-                        return ResponseMessage.success("Quiz finished successfully", quiz);
+                        return ResponseMessage.success("Quiz finished successfully", mapToDto(quiz));
                     })
                     .orElse(ResponseMessage.fail("Quiz not found", null));
         } catch (Exception e) {
@@ -102,18 +128,18 @@ public class QuizServiceImpl implements QuizService {
 
     @Override
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseMessage<Quiz> toggleCheatingControl(Integer quizId, Boolean enabled) {
+    public ResponseMessage<QuizDto> toggleCheatingControl(Integer quizId, Boolean enabled) {
         try {
             User teacher = Helper.getCurrentPrincipal();
 
             return quizRepository.findById(quizId)
                     .map(quiz -> {
-                        if (!quiz.getCreatedBy().equals(teacher)) {
-                            return ResponseMessage.<Quiz>fail("You are not allowed to change this quiz", null);
+                        if (!Objects.equals(quiz.getCreatedBy().getId(), teacher.getId())) {
+                            return ResponseMessage.<QuizDto>fail("You are not allowed to change this quiz", null);
                         }
                         quiz.setCheatingControl(Boolean.TRUE.equals(enabled));
                         quizRepository.save(quiz);
-                        return ResponseMessage.success("Cheating control set to: " + enabled, quiz);
+                        return ResponseMessage.success("Cheating control set to: " + enabled, mapToDto(quiz));
                     })
                     .orElse(ResponseMessage.fail("Quiz not found", null));
         } catch (Exception e) {
@@ -124,11 +150,12 @@ public class QuizServiceImpl implements QuizService {
 
     @Override
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseMessage<List<Quiz>> getAllQuizzes() {
+    public ResponseMessage<List<QuizDto>> getAllQuizzes() {
         try {
             User teacher = Helper.getCurrentPrincipal();
             List<Quiz> quizzes = quizRepository.findByCreatedBy(teacher);
-            return ResponseMessage.success("Your quizzes fetched successfully", quizzes);
+            List<QuizDto> quizDtos = quizzes.stream().map(this::mapToDto).toList();
+            return ResponseMessage.success("Your quizzes fetched successfully", quizDtos);
         } catch (Exception e) {
             log.error("Error fetching quizzes: {}", e.getMessage(), e);
             return ResponseMessage.fail("Error fetching quizzes", null);
@@ -137,16 +164,16 @@ public class QuizServiceImpl implements QuizService {
 
     @Override
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseMessage<Quiz> getQuizById(Integer quizId) {
+    public ResponseMessage<QuizDto> getQuizById(Integer quizId) {
         try {
             User teacher = Helper.getCurrentPrincipal();
 
             return quizRepository.findById(quizId)
                     .map(quiz -> {
-                        if (!quiz.getCreatedBy().equals(teacher)) {
-                            return ResponseMessage.<Quiz>fail("You are not allowed to view this quiz", null);
+                        if (!Objects.equals(quiz.getCreatedBy().getId(), teacher.getId())) {
+                            return ResponseMessage.<QuizDto>fail("You are not allowed to view this quiz", null);
                         }
-                        return ResponseMessage.success("Quiz fetched successfully", quiz);
+                        return ResponseMessage.success("Quiz fetched successfully", mapToDto(quiz));
                     })
                     .orElse(ResponseMessage.fail("Quiz not found", null));
         } catch (Exception e) {
@@ -160,15 +187,7 @@ public class QuizServiceImpl implements QuizService {
         try {
             List<QuizDto> quizzes = quizRepository.findByIsActiveTrue()
                     .stream()
-                    .map(q -> {
-                        QuizDto dto = new QuizDto();
-                        dto.setId(q.getId()); // 🔑 id qo‘shildi
-                        dto.setTitle(q.getTitle());
-                        dto.setDescription(q.getDescription());
-                        dto.setCheatingControl(q.getCheatingControl());
-                        dto.setDurationMinutes(q.getDurationMinutes());
-                        return dto;
-                    })
+                    .map(this::mapToDto)
                     .toList();
 
             return ResponseMessage.success("All active quizzes fetched successfully", quizzes);
@@ -182,15 +201,7 @@ public class QuizServiceImpl implements QuizService {
     public ResponseMessage<QuizDto> getQuizByIdPublic(Integer quizId) {
         try {
             return quizRepository.findByIdAndIsActiveTrue(quizId)
-                    .map(q -> {
-                        QuizDto dto = new QuizDto();
-                        dto.setId(q.getId()); // 🔑 id qo‘shildi
-                        dto.setTitle(q.getTitle());
-                        dto.setDescription(q.getDescription());
-                        dto.setCheatingControl(q.getCheatingControl());
-                        dto.setDurationMinutes(q.getDurationMinutes());
-                        return ResponseMessage.success("Quiz fetched successfully", dto);
-                    })
+                    .map(q -> ResponseMessage.success("Quiz fetched successfully", mapToDto(q)))
                     .orElse(ResponseMessage.fail("Quiz not found or not active", null));
         } catch (Exception e) {
             log.error("Error fetching public quiz with id {}: {}", quizId, e.getMessage(), e);

@@ -135,7 +135,7 @@ public class QuestionServiceImpl implements QuestionService {
 
     @Override
     @PreAuthorize("hasRole('TEACHER')")
-    public ResponseMessage<List<Question>> getAllQuestions(Integer quizId) {
+    public ResponseMessage<List<QuestionDto>> getAllQuestions(Integer quizId) {
         try {
             User teacher = Helper.getCurrentPrincipal();
             Quiz quiz = quizRepository.findById(quizId)
@@ -146,7 +146,13 @@ public class QuestionServiceImpl implements QuestionService {
             }
 
             List<Question> questions = questionRepository.findByQuizId(quizId);
-            return ResponseMessage.success("Questions list", questions);
+
+            // ✅ teacher uchun correctAnswer bilan qaytariladi
+            List<QuestionDto> dtoList = questions.stream()
+                    .map(this::mapToDtoWithAnswer)
+                    .toList();
+
+            return ResponseMessage.success("Questions list fetched successfully", dtoList);
         } catch (Exception e) {
             log.error("Error fetching questions: {}", e.getMessage(), e);
             return ResponseMessage.fail("Error fetching questions", null);
@@ -215,6 +221,12 @@ public class QuestionServiceImpl implements QuestionService {
         question.setOptionC(dto.getOptionC());
         question.setOptionD(dto.getOptionD());
         question.setCorrectAnswer(dto.getCorrectAnswer());
+    }
+
+    private QuestionDto mapToDtoWithAnswer(Question question) {
+        QuestionDto dto = mapToDto(question); // umumiy qismi reuse
+        dto.setCorrectAnswer(question.getCorrectAnswer());
+        return dto;
     }
 
     private ResponseMessage<Question> validateDto(QuestionDto dto) {

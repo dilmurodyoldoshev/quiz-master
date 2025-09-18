@@ -1,159 +1,112 @@
 package uz.app.quizmaster.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import uz.app.quizmaster.dto.LeaderboardEntryDto;
 import uz.app.quizmaster.dto.ResultDto;
-import uz.app.quizmaster.entity.Attempt;
 import uz.app.quizmaster.entity.Quiz;
 import uz.app.quizmaster.entity.Result;
 import uz.app.quizmaster.entity.User;
 import uz.app.quizmaster.helper.Helper;
 import uz.app.quizmaster.payload.ResponseMessage;
-import uz.app.quizmaster.repository.AttemptRepository;
-import uz.app.quizmaster.repository.QuizRepository;
 import uz.app.quizmaster.repository.ResultRepository;
+import uz.app.quizmaster.repository.QuizRepository;
 import uz.app.quizmaster.service.ResultService;
 
-import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BinaryOperator;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ResultServiceImpl implements ResultService {
 
     private final ResultRepository resultRepository;
-    private final AttemptRepository attemptRepository;
     private final QuizRepository quizRepository;
 
+    // 🔹 TEACHER: o‘z quizlariga tushgan natijalarni ko‘rish
     @Override
-    public ResponseMessage<Result> calculateResult(Integer attemptId) {
-        Attempt attempt = attemptRepository.findById(attemptId)
-                .orElseThrow(() -> new NoSuchElementException("Attempt not found"));
+    @PreAuthorize("hasRole('TEACHER')")
+    public ResponseMessage<List<LeaderboardEntryDto>> getResultsForMyQuizzes(Integer quizId) {
+        User teacher = Helper.getCurrentPrincipal();
 
-        Result existing = resultRepository.findByQuizIdOrderByScoreDesc(attempt.getQuiz().getId())
-                .stream()
-                .filter(r -> r.getUser().getId().equals(attempt.getUser().getId()))
-                .findFirst()
-                .orElse(null);
+        // 1. Quizni olish
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new RuntimeException("Quiz not found"));
 
-        if (existing != null) {
-            return ResponseMessage.success("Result already exists", existing);
+        // 2. Teacher o‘zi yaratganmi tekshirish
+        if (!quiz.getCreatedBy().getId().equals(teacher.getId())) {
+            return ResponseMessage.fail("You can only view results for your own quizzes", null);
         }
 
-        Result result = new Result();
-        result.setQuiz(attempt.getQuiz());
-        result.setUser(attempt.getUser());
-        result.setScore(attempt.getScore());
-        result.setCompletedAt(LocalDateTime.now());
+        // 3. Resultlarni olish
+        List<Result> results = resultRepository.findByQuizOrderByScoreDesc(quiz);
 
-        Result saved = resultRepository.save(result);
-        return ResponseMessage.success("Result calculated successfully", saved);
+        // 4. DTO mapping + rank hisoblash
+        List<LeaderboardEntryDto> leaderboard = new ArrayList<>();
+        int rank = 1;
+        for (Result r : results) {
+            LeaderboardEntryDto dto = new LeaderboardEntryDto();
+            dto.setUsername(r.getUser().getUsername());
+            dto.setScore(r.getScore());
+            dto.setRank(rank++);
+            leaderboard.add(dto);
+        }
+
+        return ResponseMessage.success("Leaderboard fetched", leaderboard);
     }
 
+    // 🔹 STUDENT: o‘zining natijalarini ko‘rish
     @Override
-    public ResponseMessage<List<LeaderboardEntryDto>> getLeaderboard(Integer quizId) {
-        Quiz quiz = quizRepository.findById(quizId)
-                .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
-
-        // Barcha attempts
-        List<Attempt> attempts = attemptRepository.findByQuizId(quizId);
-
-        // Har bir user uchun eng yuqori balli attempt
-        List<Attempt> bestAttempts = attempts.stream()
-                .filter(a -> a.getFinishedAt() != null) // faqat tugallanganlar
-                .collect(Collectors.toMap(a -> a.getUser().getId(), Function.identity(), BinaryOperator.maxBy((a1, a2) -> {
-                    int cmp = Integer.compare(a1.getScore(), a2.getScore());
-                    if (cmp == 0) {
-                        return a1.getFinishedAt().compareTo(a2.getFinishedAt());
-                    }
-                    return cmp;
-                })))
-                .values()
-                .stream()
-                .toList();
-
-        // Sorting: score DESC, finishedAt ASC
-        List<Attempt> sorted = bestAttempts.stream()
-                .sorted((a1, a2) -> {
-                    int cmp = Integer.compare(a2.getScore(), a1.getScore()); // DESC
-                    if (cmp == 0) {
-                        return a1.getFinishedAt().compareTo(a2.getFinishedAt()); // ASC
-                    }
-                    return cmp;
-                })
-                .toList();
-
-        // Rank berish
-        AtomicInteger counter = new AtomicInteger(1);
-        List<LeaderboardEntryDto> leaderboard = sorted.stream()
-                .map(a -> new LeaderboardEntryDto(
-                        a.getUser().getUsername(),
-                        a.getScore(),
-                        counter.getAndIncrement()
-                ))
-                .toList();
-
-        return ResponseMessage.success("Leaderboard fetched successfully", leaderboard);
-    }
-
-    @Override
-    public ResponseMessage<List<ResultDto>> getResultsForCurrentUser() {
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseMessage<List<ResultDto>> getMyResults() {
         try {
-            User me = Helper.getCurrentPrincipal();
-            if (me == null) return ResponseMessage.fail("User not authenticated", null);
+            User student = Helper.getCurrentPrincipal();
+            List<Result> results = resultRepository.findByUser(student);
 
-            // Foydalanuvchining barcha natijalari (oxirgi tugallangan bo'yicha tartiblash)
-            List<Result> results = resultRepository.findByUserIdOrderByCompletedAtDesc(me.getId());
+            List<ResultDto> resultDtos = results.stream()
+                    .map(r -> new ResultDto(
+                            r.getQuiz().getId(),
+                            r.getQuiz().getTitle(),
+                            r.getScore(),
+                            r.getCompletedAt(),
+                            r.getRank()
+                    ))
+                    .toList();
 
-            // Agar rank ham kerak bo'lsa, har bir quiz uchun leaderboard olib, pozitsiyasini hisoblang.
-            // Bu yondashuv oddiy va tushunarli: quiz bo'yicha barcha resultlarni olamiz va index topamiz.
-            Map<Integer, List<Result>> byQuiz = results.stream()
-                    .collect(Collectors.groupingBy(r -> r.getQuiz().getId()));
-
-            List<ResultDto> dtoList = results.stream().map(r -> {
-                ResultDto dto = new ResultDto();
-                dto.setQuizId(r.getQuiz().getId());
-                dto.setQuizTitle(r.getQuiz().getTitle());
-                dto.setScore(r.getScore());
-                dto.setCompletedAt(r.getCompletedAt());
-
-                // rank hisoblash (agar agar resultRepository.findByQuizIdOrderByScoreDesc mavjud bo'lsa)
-                List<Result> leaderboard = resultRepository.findByQuizIdOrderByScoreDesc(r.getQuiz().getId());
-                AtomicInteger rankCounter = new AtomicInteger(1);
-                Integer rank = leaderboard.stream()
-                        .filter(lr -> {
-                            boolean same = lr.getUser().getId().equals(me.getId());
-                            if (!same) rankCounter.incrementAndGet();
-                            return same;
-                        })
-                        .findFirst()
-                        .map(x -> rankCounter.get() - 1) // because incremented after non-matching entries
-                        .orElse(null);
-
-                // Above logic is a bit awkward with AtomicInteger; simpler:
-                if (rank == null) {
-                    for (int i = 0; i < leaderboard.size(); i++) {
-                        if (leaderboard.get(i).getUser().getId().equals(me.getId())) {
-                            rank = i + 1;
-                            break;
-                        }
-                    }
-                }
-
-                dto.setRank(rank);
-                return dto;
-            }).collect(Collectors.toList());
-
-            return ResponseMessage.success("User results fetched successfully", dtoList);
+            return ResponseMessage.success("Your results fetched successfully", resultDtos);
         } catch (Exception e) {
-            return ResponseMessage.fail("Error fetching user results: " + e.getMessage(), null);
+            log.error("Error fetching student results: {}", e.getMessage(), e);
+            return ResponseMessage.fail("Error fetching your results", null);
+        }
+    }
+
+    // 🔹 STUDENT: Leaderboard (quiz bo‘yicha umumiy natijalar va ranklar)
+    @Override
+    public ResponseMessage<List<LeaderboardEntryDto>> getLeaderboardForQuiz(Integer quizId) {
+        try {
+            Quiz quiz = quizRepository.findById(quizId)
+                    .orElseThrow(() -> new RuntimeException("Quiz not found"));
+
+            List<Result> results = resultRepository.findByQuiz(quiz);
+
+            // score bo‘yicha tartiblash
+            List<LeaderboardEntryDto> leaderboard = results.stream()
+                    .sorted(Comparator.comparing(Result::getScore).reversed())
+                    .map(r -> new LeaderboardEntryDto(
+                            r.getUser().getUsername(),
+                            r.getScore(),
+                            r.getRank()
+                    ))
+                    .toList();
+
+            return ResponseMessage.success("Leaderboard fetched successfully", leaderboard);
+        } catch (Exception e) {
+            log.error("Error fetching leaderboard: {}", e.getMessage(), e);
+            return ResponseMessage.fail("Error fetching leaderboard", null);
         }
     }
 }

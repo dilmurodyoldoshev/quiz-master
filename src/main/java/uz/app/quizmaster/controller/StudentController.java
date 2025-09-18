@@ -66,13 +66,13 @@ public class StudentController {
     // 5. Natijalar va leaderboard
     @GetMapping("/quizzes/{quizId}/leaderboard")
     public ResponseMessage<List<LeaderboardEntryDto>> getLeaderboard(@PathVariable Integer quizId) {
-        return resultService.getLeaderboard(quizId);
+        return resultService.getLeaderboardForQuiz(quizId);
     }
 
-    // result
+    // Studentning o‘z resultlari
     @GetMapping("/results")
     public ResponseMessage<List<ResultDto>> getMyResults() {
-        return resultService.getResultsForCurrentUser();
+        return resultService.getMyResults();
     }
 
 }

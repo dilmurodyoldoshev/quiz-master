@@ -22,16 +22,21 @@ public class UserController {
         return buildResponse(userService.createUser(userDto));
     }
 
-    // barcha foydalanuvchilar ro‘yxati
+    // barcha foydalanuvchilar ro‘yxati (faqat ADMIN)
     @GetMapping
     public ResponseEntity<ResponseMessage> getAllUsers() {
         return buildResponse(userService.getAllUsers());
     }
 
-    // id bo‘yicha foydalanuvchi olish
+    // id bo‘yicha foydalanuvchi olish (faqat ADMIN)
     @GetMapping("/{id}")
     public ResponseEntity<ResponseMessage> getUserById(@PathVariable Integer id) {
         return buildResponse(userService.getUserById(id));
     }
 
+    // o‘z profilini olish (login qilgan user uchun)
+    @GetMapping("/me")
+    public ResponseEntity<ResponseMessage> getMyProfile() {
+        return buildResponse(userService.getMyProfile());
+    }
 }

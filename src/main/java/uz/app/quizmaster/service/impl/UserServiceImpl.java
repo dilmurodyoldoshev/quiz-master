@@ -24,9 +24,21 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
+    private UserDto mapToDto(User user) {
+        UserDto dto = new UserDto();
+        dto.setId(user.getId());
+        dto.setFirstName(user.getFirstName());
+        dto.setLastName(user.getLastName());
+        dto.setUsername(user.getUsername());
+        dto.setPhone(user.getPhone());
+        dto.setEmail(user.getEmail());
+        dto.setRole(user.getRole());
+        return dto;
+    }
+
     @Override
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseMessage<User> createUser(UserDto userDto) {
+    public ResponseMessage<UserDto> createUser(UserDto userDto) {
         try {
             User currentAdmin = Helper.getCurrentPrincipal();
 
@@ -55,7 +67,7 @@ public class UserServiceImpl implements UserService {
 
             return ResponseMessage.success(
                     "User created successfully by admin: " + currentAdmin.getUsername(),
-                    savedUser
+                    mapToDto(savedUser)
             );
 
         } catch (Exception e) {
@@ -66,21 +78,35 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseMessage<List<User>> getAllUsers() {
+    public ResponseMessage<List<UserDto>> getAllUsers() {
         List<User> users = userRepository.findAll();
         if (users.isEmpty()) {
             return ResponseMessage.fail("No users found", null);
         }
-        return ResponseMessage.success("Users retrieved successfully", users);
+        List<UserDto> userDtos = users.stream()
+                .map(this::mapToDto)
+                .toList();
+        return ResponseMessage.success("Users retrieved successfully", userDtos);
     }
 
     @Override
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseMessage<User> getUserById(Integer id) {
+    public ResponseMessage<UserDto> getUserById(Integer id) {
         Optional<User> optionalUser = userRepository.findById(id);
         if (optionalUser.isEmpty()) {
             return ResponseMessage.fail("User not found with id: " + id, null);
         }
-        return ResponseMessage.success("User retrieved successfully", optionalUser.get());
+        return ResponseMessage.success("User retrieved successfully", mapToDto(optionalUser.get()));
+    }
+
+    @Override
+    public ResponseMessage<UserDto> getMyProfile() {
+        try {
+            User currentUser = Helper.getCurrentPrincipal();
+            return ResponseMessage.success("Profile fetched successfully", mapToDto(currentUser));
+        } catch (Exception e) {
+            log.error("Error fetching profile: {}", e.getMessage(), e);
+            return ResponseMessage.fail("Error fetching profile", null);
+        }
     }
 }
