@@ -59,8 +59,8 @@ public class StudentController {
     public ResponseMessage<AnswerDto> submitAnswer(
             @PathVariable Integer attemptId,
             @PathVariable Integer questionId,
-            @RequestParam String selectedOption) {
-        return answerService.submitAnswer(attemptId, questionId, selectedOption);
+            @RequestBody AnswerRequestDto requestDto) {
+        return answerService.submitAnswer(attemptId, questionId, requestDto.getSelectedOption());
     }
 
     // 5. Natijalar va leaderboard
