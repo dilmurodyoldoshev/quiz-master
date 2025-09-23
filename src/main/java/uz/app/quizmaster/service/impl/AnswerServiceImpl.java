@@ -34,20 +34,12 @@ public class AnswerServiceImpl implements AnswerService {
 
     @Override
     @Transactional
-    public ResponseMessage<AnswerDto> submitAnswer(Integer attemptId, Integer questionId, String selectedOption) {
+    public ResponseMessage<AnswerDto> submitAnswer(Integer attemptId, Integer questionId, AnswerType selected) {
         try {
             User student = Helper.getCurrentPrincipal();
 
-            if (selectedOption == null || selectedOption.trim().isEmpty()) {
+            if (selected == null) {
                 return ResponseMessage.fail("Selected option is required", null);
-            }
-
-            // Normalize to enum
-            AnswerType selected;
-            try {
-                selected = AnswerType.valueOf(selectedOption.trim().toUpperCase());
-            } catch (IllegalArgumentException ex) {
-                return ResponseMessage.fail("Invalid selected option. Allowed values: A, B, C, D", null);
             }
 
             // Attempt tekshirish
@@ -89,7 +81,7 @@ public class AnswerServiceImpl implements AnswerService {
             answer.setQuestion(question);
             answer.setUser(student);
             answer.setAttempt(attempt);
-            answer.setSelectedOption(selected.name());
+            answer.setSelectedOption(selected);
 
             boolean correct = question.getCorrectAnswer() != null && question.getCorrectAnswer().equals(selected);
             answer.setIsCorrect(correct);
