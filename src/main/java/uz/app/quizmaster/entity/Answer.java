@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import uz.app.quizmaster.enums.AnswerType;
 
 import java.time.LocalDateTime;
 
@@ -17,7 +18,7 @@ public class Answer {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    private String selectedOption;
+    private AnswerType selectedOption;
     private Boolean isCorrect;
     private LocalDateTime answeredAt;
 
