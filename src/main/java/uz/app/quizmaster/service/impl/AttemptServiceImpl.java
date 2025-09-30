@@ -6,10 +6,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uz.app.quizmaster.dto.AnswerDto;
 import uz.app.quizmaster.dto.AttemptDto;
-import uz.app.quizmaster.entity.Answer;
-import uz.app.quizmaster.entity.Attempt;
-import uz.app.quizmaster.entity.Quiz;
-import uz.app.quizmaster.entity.User;
+import uz.app.quizmaster.entity.*;
+import uz.app.quizmaster.enums.AnswerType;
 import uz.app.quizmaster.helper.Helper;
 import uz.app.quizmaster.payload.ResponseMessage;
 import uz.app.quizmaster.repository.AnswerRepository;
@@ -19,6 +17,7 @@ import uz.app.quizmaster.service.AttemptService;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -29,6 +28,8 @@ public class AttemptServiceImpl implements AttemptService {
     private final AttemptRepository attemptRepository;
     private final QuizRepository quizRepository;
     private final AnswerRepository answerRepository;
+
+
 
     @Override
     @PreAuthorize("hasRole('STUDENT')")
@@ -71,15 +72,11 @@ public class AttemptServiceImpl implements AttemptService {
     @Override
     @PreAuthorize("hasRole('STUDENT')")
     @Transactional
-    public ResponseMessage<AttemptDto> finishAttempt(Integer attemptId) {
+    public ResponseMessage<AttemptDto> finishAttempt(Integer attemptId, Map<Integer, String> answersMap) {
         User student = Helper.getCurrentPrincipal();
 
-        Optional<Attempt> optAttempt = attemptRepository.findById(attemptId);
-        if (optAttempt.isEmpty()) {
-            return ResponseMessage.fail("Attempt not found", null);
-        }
-
-        Attempt attempt = optAttempt.get();
+        Attempt attempt = attemptRepository.findById(attemptId)
+                .orElseThrow(() -> new RuntimeException("Attempt not found"));
 
         if (!attempt.getUser().getId().equals(student.getId())) {
             return ResponseMessage.fail("You are not allowed to finish this attempt", null);
@@ -89,16 +86,41 @@ public class AttemptServiceImpl implements AttemptService {
             return ResponseMessage.fail("Attempt is already finished", mapToDto(attempt));
         }
 
-        LocalDateTime deadline = attempt.getDeadline();
         LocalDateTime now = LocalDateTime.now();
-
-        if (deadline != null && now.isAfter(deadline)) {
-            attempt.setFinishedAt(deadline);
+        if (attempt.getDeadline() != null && now.isAfter(attempt.getDeadline())) {
+            attempt.setFinishedAt(attempt.getDeadline());
             attempt.setScore(0);
             Attempt saved = attemptRepository.save(attempt);
             return ResponseMessage.fail("Time is up! Your attempt has been auto-finished.", mapToDto(saved));
         }
 
+        // Javoblarni saqlash yoki update qilish
+        answersMap.forEach((questionId, selectedOptionStr) -> {
+            // String → AnswerType
+            AnswerType selectedOption;
+            try {
+                selectedOption = AnswerType.valueOf(selectedOptionStr);
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Invalid answer option: " + selectedOptionStr);
+            }
+
+            Question question = Helper.getQuestionById(questionId);
+
+            Answer answer = answerRepository.findByUserIdAndQuestionId(student.getId(), questionId)
+                    .orElseGet(() -> {
+                        Answer a = new Answer();
+                        a.setUser(student);
+                        a.setQuestion(question);
+                        return a;
+                    });
+
+            answer.setSelectedOption(selectedOption);
+            answer.setIsCorrect(selectedOption.equals(question.getCorrectAnswer()));
+
+            answerRepository.save(answer);
+        });
+
+        // Attempt yakunlash
         attempt.setFinishedAt(now);
 
         List<Answer> answers = answerRepository.findByUserIdAndQuestionQuizId(
@@ -110,9 +132,23 @@ public class AttemptServiceImpl implements AttemptService {
                 .count();
 
         attempt.setScore(score);
-
         Attempt saved = attemptRepository.save(attempt);
+
         return ResponseMessage.success("Attempt finished successfully", mapToDto(saved));
+    }
+
+    @Override
+    @PreAuthorize("hasRole('STUDENT')")
+    public ResponseMessage<List<AttemptDto>> getAttempts() {
+        User student = Helper.getCurrentPrincipal();
+
+        List<Attempt> attempts = attemptRepository.findByUserIdOrderByStartedAtDesc(student.getId());
+
+        List<AttemptDto> dtoList = attempts.stream()
+                .map(this::mapToDto)
+                .collect(Collectors.toList());
+
+        return ResponseMessage.success("User attempts retrieved successfully", dtoList);
     }
 
     /**

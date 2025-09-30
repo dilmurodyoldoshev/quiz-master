@@ -1,12 +1,17 @@
 package uz.app.quizmaster.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import uz.app.quizmaster.dto.*;
+import uz.app.quizmaster.helper.Helper;
 import uz.app.quizmaster.payload.ResponseMessage;
 import uz.app.quizmaster.service.*;
 
 import java.util.List;
+import java.util.Map;
+
+import static uz.app.quizmaster.helper.Helper.buildResponse;
 
 @RestController
 @RequestMapping("/api/student")
@@ -21,58 +26,66 @@ public class StudentController {
 
     // 1. Quizlar
     @GetMapping("/quizzes")
-    public ResponseMessage<List<QuizDto>> getAllQuizzes() {
-        return quizService.getAllQuizzesPublic();
+    public ResponseEntity<ResponseMessage> getAllQuizzes() {
+        return buildResponse(quizService.getAllQuizzesPublic());
     }
 
     @GetMapping("/quizzes/{quizId}")
-    public ResponseMessage<QuizDto> getQuiz(@PathVariable Integer quizId) {
-        return quizService.getQuizByIdPublic(quizId);
+    public ResponseEntity<ResponseMessage> getQuiz(@PathVariable Integer quizId) {
+        return buildResponse(quizService.getQuizByIdPublic(quizId));
     }
 
     // 2. Savollar
     @GetMapping("/quizzes/{quizId}/questions")
-    public ResponseMessage<List<QuestionDto>> getAllQuestions(@PathVariable Integer quizId) {
-        return questionService.getAllQuestionsPublic(quizId);
+    public ResponseEntity<ResponseMessage> getAllQuestions(@PathVariable Integer quizId) {
+        return buildResponse(questionService.getAllQuestionsPublic(quizId));
     }
 
     @GetMapping("/quizzes/{quizId}/questions/{questionId}")
-    public ResponseMessage<QuestionDto> getQuestion(
+    public ResponseEntity<ResponseMessage> getQuestion(
             @PathVariable Integer quizId,
             @PathVariable Integer questionId) {
-        return questionService.getQuestionPublic(quizId, questionId);
+        return buildResponse(questionService.getQuestionPublic(quizId, questionId));
     }
 
     // 3. Attempt
     @PostMapping("/quizzes/{quizId}/start")
-    public ResponseMessage<AttemptDto> startAttempt(@PathVariable Integer quizId) {
-        return attemptService.startAttempt(quizId);
+    public ResponseEntity<ResponseMessage> startAttempt(@PathVariable Integer quizId) {
+        return buildResponse(attemptService.startAttempt(quizId));
     }
 
     @PostMapping("/attempts/{attemptId}/finish")
-    public ResponseMessage<AttemptDto> finishAttempt(@PathVariable Integer attemptId) {
-        return attemptService.finishAttempt(attemptId);
+    public ResponseEntity<ResponseMessage> finishAttempt(
+            @PathVariable Integer attemptId,
+            @RequestBody Map<Integer, String> answers) {
+        ResponseMessage response = attemptService.finishAttempt(attemptId, answers);
+        return Helper.buildResponse(response);
+    }
+
+    // 6. Student urinishlari
+    @GetMapping("/attempts")
+    public ResponseEntity<ResponseMessage> getMyAttempts() {
+        return buildResponse(attemptService.getAttempts());
     }
 
     // 4. Javob yuborish
     @PostMapping("/attempts/{attemptId}/questions/{questionId}/answer")
-    public ResponseMessage<AnswerDto> submitAnswer(
+    public ResponseEntity<ResponseMessage> submitAnswer(
             @PathVariable Integer attemptId,
             @PathVariable Integer questionId,
             @RequestBody AnswerRequestDto requestDto) {
-        return answerService.submitAnswer(attemptId, questionId, requestDto.getSelectedOption());
+        return buildResponse(answerService.submitAnswer(attemptId, questionId, requestDto.getSelectedOption()));
     }
 
     // 5. Natijalar va leaderboard
     @GetMapping("/quizzes/{quizId}/leaderboard")
-    public ResponseMessage<List<LeaderboardEntryDto>> getLeaderboard(@PathVariable Integer quizId) {
-        return resultService.getLeaderboardForQuiz(quizId);
+    public ResponseEntity<ResponseMessage> getLeaderboard(@PathVariable Integer quizId) {
+        return buildResponse(resultService.getLeaderboardForQuiz(quizId));
     }
 
     // Studentning o‘z resultlari
     @GetMapping("/results")
-    public ResponseMessage<List<ResultDto>> getMyResults() {
-        return resultService.getMyResults();
+    public ResponseEntity<ResponseMessage> getMyResults() {
+        return buildResponse(resultService.getMyResults());
     }
-
 }
