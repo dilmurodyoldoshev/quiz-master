@@ -11,5 +11,5 @@ public interface AttemptRepository extends JpaRepository<Attempt, Integer> {
     // Oxirgi attempt (agar ko‘p bo‘lsa ham eng so‘nggisi)
     Optional<Attempt> findFirstByUserIdAndQuizIdOrderByStartedAtDesc(Integer userId, Integer quizId);
 
-    List<Attempt> findByQuizId(Integer quizId);
+    List<Attempt> findByUserIdOrderByStartedAtDesc(Integer id);
 }

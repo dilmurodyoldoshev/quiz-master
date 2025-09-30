@@ -12,4 +12,6 @@ public interface AnswerRepository extends JpaRepository<Answer, Integer> {
     List<Answer> findByUserIdAndQuestionQuizId(Integer userId, Integer quizId);
 
     Optional<Answer> findByAttemptIdAndQuestionId(Integer attemptId, Integer questionId);
+
+    Optional<Answer> findByUserIdAndQuestionId(Integer id, Integer questionId);
 }
